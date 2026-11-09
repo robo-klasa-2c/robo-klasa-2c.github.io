@@ -12,6 +12,10 @@
 <style>
   /* Page-only pieces: odd-one-out shapes, patterns, riddles and the three mini-games (sudoku, maze, memory). */
   .custom { margin-top: 12px; }
+  .seq { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 7vw, 46px); letter-spacing: 2px; line-height: 1.3; }
+  .seq b { color: #FF7043; }
+  .maze .lava { animation: lava 1.6s ease-in-out infinite alternate; }
+  @keyframes lava { to { opacity: .75; } }
   .prompt:empty { min-height: 0; margin: 8px 0; }
   .shape { width: 72px; height: 72px; }
   .emo { font-size: 56px; line-height: 1; }
@@ -73,6 +77,9 @@
   .mem button.up { background: #fff; box-shadow: 0 5px 0 var(--line); border: 3px solid var(--line); }
   .mem button.got { background: #E8F5E9; border: 3px solid #A5D6A7; box-shadow: 0 5px 0 #A5D6A7; cursor: default; animation: pop .35s; }
   .mem button.hint { animation: glow 1s infinite; }
+  .mem button.txt { font-family: var(--display); font-weight: 600; font-size: min(4.8vw, 22px); line-height: 1.1; padding: 2px; }
+  .analogy .w { font-size: clamp(18px, 4.6vw, 28px); font-weight: 700; text-align: center; }
+  .opt .w { font-size: clamp(17px, 3.6vw, 22px); }
 
   @media (max-width: 560px) {
     .shape { width: 56px; height: 56px; } .emo { font-size: 46px; }
@@ -98,101 +105,132 @@ function numOpts(ans, lo = 0, hi = 40) {
   return shuffle([ans, ...sample(cand, 2)]).map(x => ({ html: String(x), ok: x === ans }));
 }
 
-/* ---------- 1. Co nie pasuje? ---------- */
+/* ---------- 1. Co nie pasuje? (teatr, pogoda, magnes – polski i przyroda; zabawki – angielski Unit 1; liczby i dni – matematyka) ---------- */
 const CATS = [
-  { pl: 'owoce', it: [['🍎', 'jabłko'], ['🍌', 'banan'], ['🍋', 'cytryna'], ['🍐', 'gruszka'], ['🍓', 'truskawka'], ['🍊', 'pomarańcza']] },
-  { pl: 'warzywa', it: [['🥕', 'marchewka'], ['🥦', 'brokuł'], ['🥒', 'ogórek'], ['🥔', 'ziemniak'], ['🧅', 'cebula'], ['🌽', 'kukurydza']] },
-  { pl: 'zwierzęta, które żyją w wodzie', it: [['🐟', 'ryba'], ['🐬', 'delfin'], ['🐙', 'ośmiornica'], ['🐳', 'wieloryb'], ['🦀', 'krab']] },
-  { pl: 'zwierzęta, które latają', it: [['🐦', 'ptak'], ['🦋', 'motyl'], ['🐝', 'pszczoła'], ['🦉', 'sowa'], ['🦅', 'orzeł']] },
-  { pl: 'pojazdy', it: [['🚗', 'samochód'], ['🚌', 'autobus'], ['🚲', 'rower'], ['🚂', 'pociąg'], ['🚜', 'traktor']] },
-  { pl: 'ubrania', it: [['👕', 'koszulka'], ['👗', 'sukienka'], ['🧣', 'szalik'], ['🧢', 'czapka'], ['🧥', 'kurtka']] },
-  { pl: 'instrumenty muzyczne', it: [['🎸', 'gitara'], ['🥁', 'bęben'], ['🎹', 'pianino'], ['🎺', 'trąbka'], ['🎷', 'saksofon']] },
-  { pl: 'przybory szkolne', it: [['✏️', 'ołówek'], ['📏', 'linijka'], ['🖍️', 'kredka'], ['📒', 'zeszyt'], ['🎒', 'plecak']] },
+  { pl: 'rzeczy z teatru', it: [['🎭', 'maska'], ['🎟️', 'bilet'], ['💺', 'fotel'], ['🔦', 'reflektor'], ['👗', 'kostium']] },
+  { pl: 'zjawiska pogodowe', it: [['☀️', 'słońce'], ['🌧️', 'deszcz'], ['❄️', 'śnieg'], ['⛈️', 'burza'], ['💨', 'wiatr'], ['🌫️', 'mgła']] },
+  { pl: 'zabawki – my favourite things', it: [['🚲', 'rower'], ['🛴', 'hulajnoga'], ['🤖', 'robot'], ['⚽', 'piłka'], ['🧸', 'miś'], ['🚂', 'pociąg'], ['🚀', 'statek kosmiczny']] },
+  { pl: 'ptaki z baśni „Brzydkie kaczątko”', it: [['🦢', 'łabędź'], ['🦆', 'kaczka'], ['🐣', 'kaczątko'], ['🐔', 'kura']] },
 ];
-const COLORS = [['#E53935', 'czerwony'], ['#1E88E5', 'niebieski'], ['#FDD835', 'żółty'], ['#43A047', 'zielony']];
+const MAG_YES = [['📎', 'spinacz'], ['🔑', 'klucz'], ['✂️', 'nożyczki'], ['🔩', 'śrubę'], ['⛓️', 'łańcuch'], ['🧷', 'agrafkę']];
+const MAG_NO = [['✏️', 'ołówek'], ['🍎', 'jabłko'], ['🧸', 'misia'], ['📄', 'kartkę'], ['🧦', 'skarpetkę'], ['🎈', 'balon'], ['🪵', 'kawałek drewna']];
+const COLORS = [['#E53935', 'czerwona', 'red'], ['#1E88E5', 'niebieska', 'blue'], ['#FDD835', 'żółta', 'yellow'], ['#43A047', 'zielona', 'green']];
 const SHAPES = ['circle', 'square', 'triangle', 'diamond'];
+const DAYS = ['poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela'];
+const V_WORDS = ['aktor', 'aktorka', 'oko', 'ucho', 'osa', 'igła', 'ekran', 'ul', 'auto', 'ołówek'];
+const C_WORDS = ['kurtyna', 'bilet', 'scena', 'maska', 'magnes', 'termometr', 'kaczka', 'łabędź', 'deszcz', 'widz'];
 function shape(kind, col) {
   const S = `fill="${col}" stroke="#333" stroke-width="3" stroke-linejoin="round"`;
   const body = { circle: `<circle cx="50" cy="50" r="38" ${S}/>`, square: `<rect x="14" y="14" width="72" height="72" rx="6" ${S}/>`,
     triangle: `<polygon points="50,10 90,86 10,86" ${S}/>`, diamond: `<polygon points="50,6 92,50 50,94 8,50" ${S}/>` }[kind];
   return `<svg class="shape" viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
 }
+const word = w => `<span class="w">${w}</span>`;
+const oddOpts = (same, odd, html) => shuffle([...same.map(x => ({ html: html(x), ok: false })), { html: html(odd), ok: true }]);
 function genOdd(i) {
-  const mode = i % 3;
+  const mode = i % 4;
   if (mode === 0) {
-    const [A, B] = sample(CATS, 2), items = sample(A.it, 3), odd = pick(B.it);
+    const [A, B] = sample(CATS, 2), items = sample(A.it, 3), odd = pick(B.it.filter(x => !A.it.some(y => y[0] === x[0])));
     return { key: 'o0' + odd[0] + items.map(x => x[0]).join(''), t: 'Co nie pasuje?', p: 'Trzy rzeczy są do siebie podobne. Jedna nie pasuje.',
       say: 'Co nie pasuje do reszty?', prompt: '', cls: 'pics', after: `${cap(odd[1])} nie pasuje, bo reszta to ${A.pl}.`,
-      review: `${odd[0]} – reszta to ${A.pl}`,
-      options: shuffle([...items.map(x => ({ html: emo(x[0]), ok: false })), { html: emo(odd[0]), ok: true }]) };
+      review: `${odd[0]} – reszta to ${A.pl}`, options: oddOpts(items.map(x => x[0]), odd[0], emo) };
   }
   if (mode === 1) {
-    const byColor = coin();
-    const [v, w] = sample(byColor ? COLORS.map(c => c[0]) : SHAPES, 2);
-    const other = shuffle(byColor ? SHAPES : COLORS.map(c => c[0]));      // all different, so only one attribute singles out an item
+    const many = coin(), same = sample(many ? MAG_YES : MAG_NO, 3), odd = pick(many ? MAG_NO : MAG_YES);
+    const why = many ? `Magnes nie przyciągnie: ${odd[1]}. Resztę przyciągnie, bo jest z żelaza lub stali.` : `Magnes przyciągnie tylko ${odd[1]}. Reszty nie przyciągnie.`;
+    return { key: 'o1' + odd[0] + same.map(x => x[0]).join(''), t: 'Co nie pasuje? Pomyśl o magnesie 🧲', p: 'Które rzeczy przyciąga magnes?',
+      say: 'Co nie pasuje? Pomyśl, które rzeczy przyciąga magnes.', prompt: '', cls: 'pics', after: why, review: why,
+      options: oddOpts(same.map(x => x[0]), odd[0], emo) };
+  }
+  if (mode === 2) {
+    const byColor = coin(), [v, w] = sample(byColor ? COLORS : SHAPES, 2);
+    const other = shuffle(byColor ? SHAPES : COLORS);      // all different, so only one attribute singles out an item
     const items = other.map((o, k) => ({ main: k === 3 ? w : v, o, odd: k === 3 }));
-    return { key: 'o1' + byColor + v + w + other.join(''), t: 'Która figura nie pasuje?', p: 'Przyjrzyj się kolorom i kształtom.',
+    return { key: 'o2' + byColor + v + w + other.join(''), t: 'Która figura nie pasuje?', p: 'Przyjrzyj się kolorom i kształtom.',
       say: 'Która figura nie pasuje do reszty?', prompt: '', cls: 'pics',
-      after: byColor ? 'Tylko ta figura ma inny kolor.' : 'Tylko ta figura ma inny kształt.',
-      options: shuffle(items.map(x => ({ html: byColor ? shape(x.o, x.main) : shape(x.main, x.o), ok: x.odd }))) };
+      after: byColor ? `Tylko ta figura jest ${w[1]}, po angielsku ${w[2]}.` : 'Tylko ta figura ma inny kształt.',
+      options: shuffle(items.map(x => ({ html: byColor ? shape(x.o, x.main[0]) : shape(x.main, x.o[0]), ok: x.odd }))) };
   }
-  const even = coin();
-  let nums, odd, why;
-  if (coin()) {
-    const pool = Array.from({ length: 19 }, (_, k) => k + 2).filter(n => n % 10 !== 0);
-    nums = sample(pool.filter(n => (n % 2 === 0) === even), 3); odd = pick(pool.filter(n => (n % 2 === 0) !== even));
-    why = `Liczba ${odd} jest ${even ? 'nieparzysta' : 'parzysta'}, a reszta liczb jest ${even ? 'parzysta' : 'nieparzysta'}.`;
+  const sub = rnd(4);
+  let same, odd, why, t;
+  if (sub === 0) {
+    const even = coin(), pool = Array.from({ length: 19 }, (_, k) => k + 2).filter(n => n % 10 !== 0);
+    same = sample(pool.filter(n => (n % 2 === 0) === even), 3); odd = pick(pool.filter(n => (n % 2 === 0) !== even));
+    t = 'Która liczba nie pasuje?'; why = `Liczba ${odd} jest ${even ? 'nieparzysta' : 'parzysta'}, a reszta liczb jest ${even ? 'parzysta' : 'nieparzysta'}.`;
+  } else if (sub === 1) {
+    same = sample([10, 20, 30, 40, 50, 60, 70, 80, 90], 3); odd = between(11, 89); while (odd % 10 === 0) odd = between(11, 89);
+    t = 'Która liczba nie pasuje?'; why = `Liczba ${odd} ma ${odd % 10} jedności, a reszta to pełne dziesiątki.`;
+  } else if (sub === 2) {
+    same = sample(DAYS.slice(0, 5), 3); odd = pick(DAYS.slice(5));
+    t = 'Który dzień nie pasuje?'; why = `${cap(odd)} to dzień wolny od szkoły, a reszta to dni, kiedy chodzimy do szkoły.`;
   } else {
-    nums = sample([10, 20, 30, 40, 50, 60, 70, 80, 90], 3); odd = between(11, 89); while (odd % 10 === 0) odd = between(11, 89);
-    why = `Liczba ${odd} nie jest pełną dziesiątką, a reszta to pełne dziesiątki.`;
+    same = sample(V_WORDS, 3); odd = pick(C_WORDS);
+    t = 'Który wyraz nie pasuje?'; why = `Wyraz ${odd} zaczyna się od spółgłoski, a reszta od samogłoski.`;
   }
-  return { key: 'o2' + odd + nums.join(), t: 'Która liczba nie pasuje?', p: 'Znajdź regułę, którą mają trzy liczby.',
-    say: 'Która liczba nie pasuje do reszty?', prompt: '', cls: 'pics', after: why, review: why,
-    options: shuffle([...nums.map(n => ({ html: String(n), ok: false })), { html: String(odd), ok: true }]) };
+  return { key: 'o3' + odd + same.join(), t, p: 'Znajdź regułę, którą mają trzy odpowiedzi.', say: t, prompt: '', cls: sub < 2 ? 'pics' : 'pics long',
+    after: why, review: why, options: oddOpts(same.map(String), String(odd), x => x) };
 }
 
-/* ---------- 2. Wzory i pary ---------- */
+/* ---------- 2. Wzory i pary (liczby, zegar, dni tygodnia, słówka) ---------- */
 const ANALOGY = [
-  ['🐶', '🦴', '🐰', '🥕', 'Pies lubi kość, a królik lubi marchewkę.'],
-  ['☀️', '😎', '🌧️', '☂️', 'Na słońce zakładamy okulary, a na deszcz bierzemy parasol.'],
-  ['🐔', '🥚', '🐄', '🥛', 'Kura daje jajka, a krowa daje mleko.'],
-  ['🦶', '🧦', '✋', '🧤', 'Na stopę zakładamy skarpetkę, a na dłoń rękawiczkę.'],
-  ['🐟', '🌊', '🐪', '🏜️', 'Ryba żyje w wodzie, a wielbłąd na pustyni.'],
-  ['🌱', '🌳', '🐣', '🐔', 'Z małej roślinki wyrasta drzewo, a z kurczątka kura.'],
-  ['✏️', '📝', '🖌️', '🎨', 'Ołówkiem piszemy, a pędzlem malujemy.'],
-  ['🚗', '⛽', '📱', '🔋', 'Samochód tankujemy, a telefon ładujemy.'],
-  ['🐒', '🍌', '🐭', '🧀', 'Małpa lubi banany, a mysz lubi ser.'],
-  ['🌙', '🛏️', '☀️', '🏫', 'W nocy śpimy, a w dzień chodzimy do szkoły.'],
+  ['one', '1', 'five', '5', 'One to 1, a five to 5.'],
+  ['red', 'czerwony', 'blue', 'niebieski', 'Red to czerwony, a blue to niebieski.'],
+  ['ball', '⚽', 'teddy bear', '🧸', 'Ball to piłka, a teddy bear to miś.'],
+  ['🐣', '🦢', '🐥', '🐔', 'Z brzydkiego kaczątka wyrósł łabędź, a z kurczątka wyrasta kura.'],
+  ['termometr', 'temperatura', 'wiatromierz', 'prędkość wiatru', 'Termometr mierzy temperaturę, a wiatromierz prędkość wiatru.'],
+  ['aktor', 'scena', 'widz', 'widownia', 'Aktor gra na scenie, a widz siedzi na widowni.'],
+  ['kropka', 'zdanie oznajmujące', 'pytajnik', 'pytanie', 'Kropkę stawiamy na końcu zdania oznajmującego, a pytajnik na końcu pytania.'],
+  ['poniedziałek', 'wtorek', 'sobota', 'niedziela', 'Po poniedziałku jest wtorek, a po sobocie niedziela.'],
+  ['pół godziny', '30 minut', 'kwadrans', '15 minut', 'Pół godziny to 30 minut, a kwadrans to 15 minut.'],
+  ['🌧️', '☂️', '☀️', '😎', 'Na deszcz bierzemy parasol, a na słońce okulary.'],
+  ['N', 'biegun północny', 'S', 'biegun południowy', 'N to biegun północny magnesu, a S to biegun południowy.'],
 ];
-const ROT = [0, 90, 180, 270];
-const arr = deg => `<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(${deg} 12 12)"><path d="M4 12h14M12 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="#1E88E5" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
+const isWord = s => /[a-ząćęłńóśźż0-9]/i.test(s);
+const cell = s => isWord(s) ? word(s) : `<span>${s}</span>`;
+const hm = m => `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')}`;
 function genPattern(i) {
   const mode = i % 3;
   if (mode === 0) {
-    const e = pick(['⭐', '🍎', '🔵', '🌸', '🐞']), a = between(1, 2), s = i < 6 ? 1 : pick([1, 2]), cnt = [0, 1, 2].map(k => a + k * s), ans = a + 3 * s;
-    return { key: 'w0' + e + a + s, t: 'Ile będzie w następnej grupie?', p: 'Zobacz, o ile rośnie każda grupa.', say: 'Ile będzie w następnej grupie?',
-      prompt: `<div class="groups">${cnt.map(n => `<div class="grp">${e.repeat(n)}</div>`).join('')}<div class="grp q">?</div></div>`, cls: 'three cols3',
-      after: `Każda grupa ma o ${s} więcej, więc następna ma ${ans}.`, options: numOpts(ans, 1, 12) };
+    const s = pick(i < 4 ? [2, 5, 10] : [2, 5, 10, -2, -5, -10, 3]), len = 4;
+    const a = s > 0 ? between(1, 100 - s * len) : between(-s * len, 100), seq = [0, 1, 2, 3].map(k => a + k * s), ans = a + len * s;
+    const cand = [...new Set([ans + 1, ans - 1, ans + s, ans - s * 2, ans + 2, ans + 10])].filter(x => x !== ans && x >= 0 && x <= 110);
+    return { key: 'w0' + a + s, t: 'Jaka liczba będzie dalej?', p: 'Znajdź regułę: o ile rosną albo maleją liczby?', say: 'Jaka liczba będzie dalej?',
+      prompt: `<div class="seq">${seq.join(', ')}, <b>?</b></div>`, cls: 'three cols3',
+      after: `Każda liczba jest ${s > 0 ? 'większa' : 'mniejsza'} o ${Math.abs(s)}, więc następna to ${ans}.`,
+      options: shuffle([ans, ...sample(cand, 2)]).map(x => ({ html: String(x), ok: x === ans })) };
   }
   if (mode === 1) {
-    const st = pick(ROT), turn = pick([90, -90]), seq = [0, 1, 2, 3].map(k => (st + k * turn + 720) % 360), ans = (st + 4 * turn + 720) % 360;
-    return { key: 'w1' + st + turn, t: 'Jak obróci się strzałka?', p: 'Strzałka obraca się zawsze tak samo.', say: 'W którą stronę będzie pokazywać następna strzałka?',
-      prompt: `<div class="arrows">${seq.map(arr).join('')}<div class="qm">?</div></div>`, cls: 'three cols3',
-      after: `Strzałka obraca się ${turn > 0 ? 'w prawo, jak wskazówki zegara' : 'w lewo, w przeciwną stronę niż wskazówki zegara'}.`,
-      options: shuffle([ans, ...sample(ROT.filter(r => r !== ans), 2)]).map(r => ({ html: arr(r), ok: r === ans })) };
+    if (coin()) {
+      const st = between(1, 10) * 60 + pick([0, 15, 30]), step = pick([15, 30]), seq = [0, 1, 2, 3].map(k => hm(st + k * step)), ans = hm(st + 4 * step);
+      const wrongs = [hm(st + 4 * step + 15), hm(st + 3 * step), hm(st + 4 * step + 60), hm(st + 5 * step)].filter(x => x !== ans && !seq.includes(x));
+      return { key: 'w1' + st + step, t: 'Która godzina będzie dalej?', p: `Co ${step === 15 ? 'kwadrans' : 'pół godziny'}? Zobacz, o ile przesuwa się czas.`,
+        say: 'Która godzina będzie dalej?', prompt: `<div class="seq">${seq.join(', ')}, <b>?</b></div>`, cls: 'three cols3',
+        after: `Co ${step === 15 ? 'kwadrans, czyli 15 minut' : 'pół godziny, czyli 30 minut'}. Następna jest ${ans}.`,
+        options: shuffle([ans, ...sample([...new Set(wrongs)], 2)]).map(x => ({ html: x, ok: x === ans })) };
+    }
+    const st = rnd(7), step = pick([1, 2]), seq = [0, 1, 2].map(k => DAYS[(st + k * step) % 7]), ans = DAYS[(st + 3 * step) % 7];
+    return { key: 'w1d' + st + step, t: 'Jaki dzień będzie dalej?', p: step === 1 ? 'Dni tygodnia po kolei.' : 'Uwaga: tu jest co drugi dzień!',
+      say: 'Jaki dzień będzie dalej?', prompt: `<div class="stmt">${seq.join(', ')}, <b style="color:#FF7043">?</b></div>`, cls: 'three cols3 long',
+      after: step === 1 ? `Po kolei: potem jest ${ans}.` : `Co drugi dzień: potem jest ${ans}.`,
+      options: shuffle([ans, ...sample(DAYS.filter(d => d !== ans && !seq.includes(d)), 2)]).map(x => ({ html: x, ok: x === ans })) };
   }
   const [a, b, c, d, why] = pick(ANALOGY), wrongs = sample(ANALOGY.map(x => x[3]).filter(x => x !== d && x !== b && x !== c), 2);
   return { key: 'w2' + a, t: 'Co pasuje do pary?', p: 'Pomyśl, co łączy pierwszą parę.', say: 'Co pasuje do drugiej pary? Pomyśl, co łączy pierwszą parę.',
-    prompt: `<div class="analogy"><span>${a}</span><span class="to">➜</span><span>${b}</span><span>${c}</span><span class="to">➜</span><span class="qm">?</span></div>`,
-    cls: 'three cols3', after: why, review: `${a}➜${b}, ${c}➜${d}`, options: shuffle([d, ...wrongs]).map(x => ({ html: emo(x), ok: x === d })) };
+    prompt: `<div class="analogy">${cell(a)}<span class="to">➜</span>${cell(b)}${cell(c)}<span class="to">➜</span><span class="qm">?</span></div>`,
+    cls: 'three cols3 long', after: why, review: `${a} ➜ ${b}, ${c} ➜ ${d}`,
+    options: shuffle([d, ...wrongs]).map(x => ({ html: isWord(x) ? word(x) : emo(x), ok: x === d })) };
 }
 
-/* ---------- 3. Zagadki ---------- */
-const ROBO_COL = [['czerwony', '#EF5350'], ['niebieski', '#42A5F5'], ['zielony', '#66BB6A'], ['żółty', '#FFEE58'], ['fioletowy', '#AB47BC']];
+/* ---------- 3. Zagadki (kolory i zabawki z angielskiego, kalendarz i zegar z matematyki, podwórko z baśni) ---------- */
+const ROBO_COL = [['czerwony', '#EF5350', 'red'], ['niebieski', '#42A5F5', 'blue'], ['zielony', '#66BB6A', 'green'], ['żółty', '#FFEE58', 'yellow'], ['fioletowy', '#AB47BC', 'purple']];
 const CMP = [['wyższy', 'najwyższy', 'najniższy'], ['szybszy', 'najszybszy', 'najwolniejszy'], ['cięższy', 'najcięższy', 'najlżejszy'], ['starszy', 'najstarszy', 'najmłodszy']];
-const ANIM = [['🐱', 'kot', 'kota'], ['🐶', 'pies', 'psa'], ['🐭', 'mysz', 'myszy'], ['🐰', 'królik', 'królika'], ['🐸', 'żaba', 'żaby'], ['🦔', 'jeż', 'jeża']];
-const LEGS = [['🐔', 'kura', 'kury', 'kur', 2], ['🦆', 'kaczka', 'kaczki', 'kaczek', 2], ['🐕', 'pies', 'psy', 'psów', 4], ['🐴', 'koń', 'konie', 'koni', 4], ['🐈', 'kot', 'koty', 'kotów', 4]];
+const TOYS = [['🚲', 'rower', 'roweru', 'bike'], ['⚽', 'piłka', 'piłki', 'ball'], ['🤖', 'robot', 'robota', 'robot'], ['🧸', 'miś', 'misia', 'teddy bear'],
+  ['🚂', 'pociąg', 'pociągu', 'train'], ['🛴', 'hulajnoga', 'hulajnogi', 'scooter'], ['🚀', 'statek', 'statku', 'spaceship']];
+const LEGS = [['🐔', 'kura', 'kury', 'kur', 2], ['🦆', 'kaczka', 'kaczki', 'kaczek', 2], ['🐕', 'pies', 'psy', 'psów', 4], ['🐈', 'kot', 'koty', 'kotów', 4]];
 const form = (n, [, one, few, many]) => `${n} ${n === 1 ? one : n <= 4 ? few : many}`;
+const WHEN = [[1, 'Jaki dzień będzie jutro?', 'Jutro będzie'], [2, 'Jaki dzień będzie pojutrze?', 'Pojutrze będzie'],
+  [-1, 'Jaki dzień był wczoraj?', 'Wczoraj był'], [-2, 'Jaki dzień był przedwczoraj?', 'Przedwczoraj był']];
+const LASTS = [[15, 'kwadrans'], [30, 'pół godziny'], [60, 'godzinę'], [45, 'trzy kwadranse']];
 function genRiddle(i) {
   const mode = i % 3;
   if (mode === 0) {
@@ -201,28 +239,43 @@ function genRiddle(i) {
     const q = `Który robot jest ${askTop ? top : low}?`;
     return { key: 'z0' + ord.map(o => o[0]).join() + cmp + askTop, t: q, p: 'Przeczytaj uważnie obie wskazówki.', say: `${facts.join(' ')} ${q}`,
       prompt: `<div class="riddle">${facts.join('<br>')}</div>`, cls: 'three cols3', after: `${cap(ans[0])} robot jest ${askTop ? top : low}.`,
-      review: `${facts.join(' ')} → ${ans[0]}`,
-      options: shuffle(ord).map(o => ({ html: `<div><span class="bot">${Robo.robot(o[1])}</span><span class="lbl">${o[0]}</span></div>`, ok: o === ans })), };
+      review: `${facts.join(' ')} → ${ans[0]} (${ans[2]})`,
+      options: shuffle(ord).map(o => ({ html: `<div><span class="bot">${Robo.robot(o[1])}</span><span class="lbl">${o[0]} · ${o[2]}</span></div>`, ok: o === ans })) };
   }
   if (mode === 1) {
-    const ord = sample(ANIM, 3), f = ([x, y]) => coin() ? `${cap(x[1])} siedzi na lewo od ${y[2]}.` : `${cap(y[1])} siedzi na prawo od ${x[2]}.`;
+    const ord = sample(TOYS, 3), f = ([x, y]) => coin() ? `${cap(x[1])} stoi na lewo od ${y[2]}.` : `${cap(y[1])} stoi na prawo od ${x[2]}.`;
     const facts = shuffle([f([ord[0], ord[1]]), f([ord[1], ord[2]])]), ask = pick([0, 1, 2]);
-    const q = ['Kto siedzi najbardziej z lewej?', 'Kto siedzi w środku?', 'Kto siedzi najbardziej z prawej?'][ask];
-    return { key: 'z1' + ord.map(o => o[1]).join() + ask, t: q, p: 'Zwierzęta siedzą obok siebie w jednym rzędzie.', say: `${facts.join(' ')} ${q}`,
+    const q = ['Co stoi najbardziej z lewej?', 'Co stoi w środku?', 'Co stoi najbardziej z prawej?'][ask];
+    return { key: 'z1' + ord.map(o => o[1]).join() + ask, t: q, p: 'Ulubione zabawki stoją na półce w jednym rzędzie.', say: `${facts.join(' ')} ${q}`,
       prompt: `<div class="riddle">${facts.join('<br>')}</div>`, cls: 'three cols3',
       after: `Kolejność od lewej: ${ord.map(o => o[1]).join(', ')}.`, review: `od lewej: ${ord.map(o => o[0]).join(' ')}`,
-      options: shuffle(ord).map(o => ({ html: `<div>${emo(o[0])}<span class="lbl">${o[1]}</span></div>`, ok: o === ord[ask] })) };
+      options: shuffle(ord).map(o => ({ html: `<div>${emo(o[0])}<span class="lbl">${o[1]} · ${o[3]}</span></div>`, ok: o === ord[ask] })) };
+  }
+  const sub = rnd(3);
+  if (sub === 0) {
+    const k = rnd(7), [off, q, pre] = pick(WHEN), ans = DAYS[(k + off + 7) % 7];
+    return { key: 'z2d' + k + off, t: q, p: `Dziś jest ${DAYS[k]}.`, say: `Dziś jest ${DAYS[k]}. ${q}`,
+      prompt: `<div class="riddle">📅 Dziś jest <b>${DAYS[k]}</b>.</div>`, cls: 'three cols3 long', after: `${pre} ${ans}.`,
+      options: shuffle([ans, ...sample(DAYS.filter(d => d !== ans && d !== DAYS[k]), 2)]).map(x => ({ html: x, ok: x === ans })) };
+  }
+  if (sub === 1) {
+    const st = between(1, 7) * 60 + pick([0, 15, 30]), [len, txt] = pick(LASTS), ans = hm(st + len);
+    const wrongs = [...new Set([hm(st + len + 15), hm(st + len - 15), hm(st + len + 30), hm(st + 60 + len)])].filter(x => x !== ans && x !== hm(st));
+    return { key: 'z2c' + st + len, t: 'O której kończy się przedstawienie?', p: 'Zegar: kwadrans to 15 minut, pół godziny to 30 minut.',
+      say: `Przedstawienie w teatrze zaczyna się o ${hm(st)} i trwa ${txt}. O której się kończy?`,
+      prompt: `<div class="riddle">🎭 Przedstawienie w teatrze zaczyna się o <b>${hm(st)}</b> i trwa <b>${txt}</b>.</div>`, cls: 'three cols3',
+      after: `${hm(st)} i jeszcze ${txt} to ${ans}.`, options: shuffle([ans, ...sample(wrongs, 2)]).map(x => ({ html: x, ok: x === ans })) };
   }
   const [A, B] = sample(LEGS.filter(l => l[4] === 2), 1).concat(sample(LEGS.filter(l => l[4] === 4), 1));
   const a = between(1, 3), b = between(1, 3), ans = a * A[4] + b * B[4];
-  return { key: 'z2' + A[1] + a + B[1] + b, t: 'Ile razem mają nóg?', p: `${cap(A[1])} ma ${A[4]} nogi, ${B[1]} ma ${B[4]} nogi.`,
+  return { key: 'z2' + A[1] + a + B[1] + b, t: 'Ile razem mają nóg?', p: `Wiejskie podwórko jak w „Brzydkim kaczątku”. ${cap(A[1])} ma ${A[4]} nogi, ${B[1]} ma ${B[4]} nogi.`,
     say: `Na podwórku: ${form(a, A)} i ${form(b, B)}. Ile razem mają nóg?`,
     prompt: `<div class="riddle">Na podwórku: ${form(a, A)} i ${form(b, B)}.<div class="row">${A[0].repeat(a)} ${B[0].repeat(b)}</div></div>`,
     cls: 'three cols3', after: `${a} razy ${A[4]} to ${a * A[4]}, ${b} razy ${B[4]} to ${b * B[4]}. Razem ${ans}.`, options: numOpts(ans, 2, 30) };
 }
 
 /* ---------- 4. Sudoku 4×4 ---------- */
-const SDK_SETS = [['🍎', '🍌', '🍇', '🍐'], ['🐱', '🐶', '🐰', '🐸'], ['🔴', '🔵', '🟡', '🟢'], ['⭐', '🌙', '☀️', '☁️']];
+const SDK_SETS = [['🚲', '🤖', '⚽', '🧸'], ['☀️', '🌧️', '❄️', '💨'], ['🎭', '🎟️', '💺', '🔦'], ['🔴', '🔵', '🟡', '🟢'], ['🦢', '🦆', '🐣', '🐔'], ['1', '2', '3', '4']];
 const BOX = k => Math.floor(Math.floor(k / 4) / 2) * 2 + Math.floor((k % 4) / 2);
 function latin() {
   const base = [[0, 1, 2, 3], [2, 3, 0, 1], [1, 0, 3, 2], [3, 2, 1, 0]], sym = shuffle([0, 1, 2, 3]);
@@ -313,24 +366,36 @@ function genMaze(i) {
       return d >= dmin && d <= dmax && (lv < 2 || t > 300 || d > manh);       // later boards make Robo walk around the rocks
     });
     if (!cands.length) continue;
-    const target = pick(cands);
-    return { kind: 'custom', key: 'm' + start + target + [...rocks].join(), t: 'Zaprogramuj Robo!', p: 'Ułóż strzałki, a potem naciśnij Start. Omijaj meteoryty ☄️.',
-      say: 'Ułóż program ze strzałek, żeby Robo doszedł do gwiazdki. Omijaj meteoryty.',
-      after: 'Robo doszedł do gwiazdki! Dobry program!', review: 'labirynt',
-      mount: (el, api) => mountMaze(el, api, start, target, rocks, pathTo(prev, target)) };
+    const target = pick(cands), [goal, to, done] = GOALS[i % GOALS.length];
+    return { kind: 'custom', key: 'm' + start + target + [...rocks].join(), t: `Tor przeszkód: ${to}!`, p: `Ułóż strzałki i naciśnij Start. Chodź po zielonych klockach, omijaj lawę!`,
+      say: `Tor przeszkód! Ułóż program ze strzałek, żeby Robo doszedł ${to}. Omijaj lawę.`,
+      after: `${done} Dobry program!`, review: 'labirynt',
+      mount: (el, api) => mountMaze(el, api, start, target, rocks, pathTo(prev, target), goal) };
   }
 }
-function boardSvg(pos, target, rocks, hint) {
-  let s = `<rect x="0" y="0" width="${N * CELL}" height="${N * CELL}" rx="8" fill="#E3F2FD" stroke="#90CAF9" stroke-width="2"/>`;
-  for (let k = 1; k < N; k++) s += `<line x1="${k * CELL}" y1="0" x2="${k * CELL}" y2="${N * CELL}" stroke="#90CAF9"/><line x1="0" y1="${k * CELL}" x2="${N * CELL}" y2="${k * CELL}" stroke="#90CAF9"/>`;
+const GOALS = [
+  ['⭐', 'do gwiazdki', 'Robo doszedł do gwiazdki!'], ['🎟️', 'po bilet do teatru', 'Robo ma bilet do teatru!'],
+  ['🧸', 'do misia – teddy bear', 'Robo znalazł misia – teddy bear!'], ['🦢', 'do łabędzia', 'Robo doszedł do łabędzia z baśni!'],
+  ['🌡️', 'do termometru', 'Robo sprawdzi temperaturę!'], ['⚽', 'do piłki – ball', 'Robo ma piłkę – ball!'],
+];
+function boardSvg(pos, target, rocks, hint, goal = '⭐') {
+  /* Blocky obstacle course: square platforms over glowing lava (lava cells simply have no platform). */
+  let s = `<defs><linearGradient id="lava" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7043"/><stop offset=".5" stop-color="#FFB300"/><stop offset="1" stop-color="#E53935"/></linearGradient></defs>
+    <rect x="0" y="0" width="${N * CELL}" height="${N * CELL}" rx="8" fill="#37474F"/>`;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const x = c * CELL + 2, y = r * CELL + 2, w = CELL - 4;
+    if (rocks.has(String([r, c]))) s += `<rect class="lava" x="${x}" y="${y}" width="${w}" height="${w}" rx="4" fill="url(#lava)"/>
+      <circle cx="${x + 10}" cy="${y + 12}" r="3" fill="#FFF59D" opacity=".8"/><circle cx="${x + 25}" cy="${y + 24}" r="2.5" fill="#FFF59D" opacity=".7"/>`;
+    else s += `<rect x="${x}" y="${y}" width="${w}" height="${w}" rx="4" fill="${(r + c) % 2 ? '#8BC34A' : '#7CB342'}"/>
+      <rect x="${x}" y="${y + w - 7}" width="${w}" height="7" rx="3" fill="#558B2F"/><rect x="${x + 3}" y="${y + 3}" width="${w - 6}" height="4" rx="2" fill="#fff" opacity=".25"/>`;
+  }
   const at = ([r, c], txt, size = 28) => `<text x="${c * CELL + CELL / 2}" y="${r * CELL + CELL / 2 + size * .36}" text-anchor="middle" font-size="${size}">${txt}</text>`;
   (hint || []).forEach(([r, c]) => { s += `<circle cx="${c * CELL + CELL / 2}" cy="${r * CELL + CELL / 2}" r="6" fill="#FFC107" opacity=".8"/>`; });
-  rocks.forEach(k => { s += at(k.split(',').map(Number), '☄️', 26); });
-  s += at(target, '⭐');
+  s += at(target, goal);
   s += Robo.robot().replace(/<svg[^>]*>/, `<svg x="${pos[1] * CELL + 3}" y="${pos[0] * CELL + 3}" width="${CELL - 6}" height="${CELL - 6}" viewBox="0 0 100 100">`);
-  return `<svg viewBox="-2 -2 ${N * CELL + 4} ${N * CELL + 4}" role="img" aria-label="plansza z robotem, gwiazdką i meteorytami">${s}</svg>`;
+  return `<svg viewBox="-2 -2 ${N * CELL + 4} ${N * CELL + 4}" role="img" aria-label="tor przeszkód z robotem, celem i lawą">${s}</svg>`;
 }
-function mountMaze(el, api, start, target, rocks, best) {
+function mountMaze(el, api, start, target, rocks, best, goal) {
   const MAX = 12, prog = [];
   let running = false, errs = 0, pos = start;
   el.innerHTML = `<div class="maze"></div><div class="prg"></div>
@@ -338,7 +403,7 @@ function mountMaze(el, api, start, target, rocks, best) {
     <div class="runrow"><button class="btn green" data-x="go">▶ Start</button><button class="btn grey" data-x="del">⌫ Cofnij</button><button class="btn grey" data-x="clr">Wyczyść</button></div></div>`;
   const mz = el.querySelector('.maze'), prg = el.querySelector('.prg');
   const hintCells = () => { if (!(api.hints && errs >= 2)) return null; let p = start; return best.slice(0, -1).map(d => (p = [p[0] + MOVES[d][0], p[1] + MOVES[d][1]])); };
-  const draw = () => { mz.innerHTML = boardSvg(pos, target, rocks, hintCells()); };
+  const draw = () => { mz.innerHTML = boardSvg(pos, target, rocks, hintCells(), goal); };
   const drawProg = (now = -1) => {
     prg.innerHTML = prog.length ? prog.map((d, k) => arrowIc(d).replace('<svg', `<svg class="${k === now ? 'now' : ''}"`)).join('') : '<span class="empty">Tu pojawi się Twój program</span>';
     el.querySelectorAll('button').forEach(b => { b.disabled = running || (b.dataset.d && prog.length >= MAX) || (b.dataset.x && !prog.length); });
@@ -357,11 +422,11 @@ function mountMaze(el, api, start, target, rocks, best) {
       if (!el.isConnected) return;
       if (k >= prog.length) {
         if (String(pos) === String(target)) return api.ok();
-        return fail('Robo nie doszedł do gwiazdki. Popraw program.');
+        return fail('Robo nie doszedł do celu. Popraw program.');
       }
       const n = [pos[0] + MOVES[prog[k]][0], pos[1] + MOVES[prog[k]][1]];
-      if (n[0] < 0 || n[0] >= N || n[1] < 0 || n[1] >= N) return fail('Ups! Robo wyszedłby poza planszę.');
-      if (rocks.has(String(n))) return fail('Bum! Na drodze był meteoryt.');
+      if (n[0] < 0 || n[0] >= N || n[1] < 0 || n[1] >= N) return fail('Ups! Robo spadłby z toru.');
+      if (rocks.has(String(n))) return fail('Ojej, lawa! Wracamy na start.');
       pos = n; draw(); drawProg(k); api.tone([520 + k * 25], .06); k++;
       setTimeout(step, 420);
     })();
@@ -385,14 +450,26 @@ function mountMaze(el, api, start, target, rocks, best) {
 }
 
 /* ---------- 6. Pary (memory) ---------- */
-const MEM_SAME = ['🍎', '🐶', '🚀', '⭐', '🌈', '🐸', '🎈', '🍦', '🦋', '⚽', '🌻', '🐢'];
-const MEM_PAIRS = [['🔑', '🔒'], ['🐝', '🍯'], ['🐶', '🦴'], ['🐰', '🥕'], ['🌧️', '☂️'], ['🦶', '🧦'], ['⚽', '🥅'], ['🐟', '🌊'], ['✏️', '📒'], ['🐒', '🍌']];
+const MEM_SAME = ['🚲', '🤖', '⚽', '🧸', '🚀', '🚂', '🎭', '🎟️', '☀️', '🌧️', '❄️', '🦢', '🐣', '🧲'];
+const MEM_EN = [['red', '🔴'], ['blue', '🔵'], ['yellow', '🟡'], ['green', '🟢'], ['ball', '⚽'], ['robot', '🤖'], ['bike', '🚲'], ['teddy bear', '🧸'],
+  ['train', '🚂'], ['scooter', '🛴'], ['spaceship', '🚀'], ['TV', '📺'], ['computer', '💻'], ['watch', '⌚'], ['three', '3'], ['seven', '7'], ['twelve', '12'], ['fifteen', '15']];
+function mathPairs(k) {                    // k sums/differences within 20 (often across ten) with different results
+  const out = [], used = new Set();
+  while (out.length < k) {
+    let q, r;
+    if (coin()) { const a = between(5, 9), b = between(11 - a, 9); q = `${a} + ${b}`; r = a + b; }
+    else { const a = between(11, 18), b = between(a - 9, 9); q = `${a} − ${b}`; r = a - b; }
+    if (!used.has(r)) { used.add(r); out.push([q, String(r)]); }
+  }
+  return out;
+}
 const BACK = '<svg class="back" viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" cy="54" rx="47" ry="12" fill="none" stroke="#FFF59D" stroke-width="6" transform="rotate(-18 50 54)"/><circle cx="50" cy="50" r="30" fill="#FFB300" stroke="#333" stroke-width="3"/></svg>';
 function genMemory(i) {
-  const r = i % 3, pairs = r === 0 ? sample(MEM_SAME, 6).map(e => [e, e]) : r === 1 ? sample(MEM_SAME, 8).map(e => [e, e]) : sample(MEM_PAIRS, 6);
-  return { kind: 'custom', key: 'p' + i + pairs.flat().join(''), t: r === 2 ? 'Znajdź pary, które do siebie pasują' : 'Znajdź pary takich samych obrazków',
-    p: r === 2 ? 'Na przykład klucz pasuje do kłódki. Zapamiętuj, gdzie co leży!' : 'Odkrywaj po dwie karty. Zapamiętuj, gdzie co leży!',
-    say: r === 2 ? 'Znajdź pary, które do siebie pasują. Na przykład klucz i kłódka.' : 'Znajdź pary takich samych obrazków.',
+  const r = i % 3, pairs = r === 0 ? sample(MEM_SAME, 6).map(e => [e, e]) : r === 1 ? sample(MEM_EN, 6) : mathPairs(6);
+  const T = [['Znajdź pary takich samych obrazków', 'Odkrywaj po dwie karty. Zapamiętuj, gdzie co leży!', 'Znajdź pary takich samych obrazków.'],
+    ['Połącz słowo po angielsku z obrazkiem', 'Kolory, zabawki i liczby z Unit 1. Na przykład „ball” i ⚽.', 'Połącz słowo po angielsku z obrazkiem.'],
+    ['Połącz działanie z wynikiem', 'Dodawanie i odejmowanie do 20. Na przykład 7 + 5 i 12.', 'Połącz działanie z wynikiem.']][r];
+  return { kind: 'custom', key: 'p' + i + pairs.flat().join(''), t: T[0], p: T[1], say: T[2],
     after: 'Wszystkie pary znalezione! Masz świetną pamięć!', review: 'pary', mount: (el, api) => mountMemory(el, api, pairs) };
 }
 function mountMemory(el, api, pairs) {
@@ -404,7 +481,7 @@ function mountMemory(el, api, pairs) {
     const b = e.target.closest('[data-c]'); if (!b || busy || !api.live()) return;
     const k = +b.dataset.c;
     if (b.classList.contains('up') || b.classList.contains('got')) return;
-    b.classList.add('up'); b.innerHTML = cards[k].e; open.push(k); api.tone([600], .05);
+    b.classList.add('up'); b.classList.toggle('txt', /[a-z0-9]/i.test(cards[k].e)); b.textContent = cards[k].e; open.push(k); api.tone([600], .05);
     if (open.length < 2) return;
     const [x, y] = open; open = [];
     if (cards[x].id === cards[y].id) {
@@ -422,14 +499,14 @@ function mountMemory(el, api, pairs) {
 Robo.start({
   id: 'robo-log-2c', lang: 'pl-PL', rate: .95,
   title: 'Robo myśli', sub: 'Gry logiczne · klasa 2c',
-  intro: '<b>Cześć! Jestem Robo i uwielbiam łamigłówki.</b> Znajdź, co nie pasuje, odgadnij wzory, rozwiąż sudoku, zaprogramuj mnie w labiryncie i poszukaj par. Na końcu zrób <b>Lot próbny</b>.',
+  intro: '<b>Cześć! Jestem Robo i uwielbiam łamigłówki.</b> Pomyślisz o tym, czego uczysz się w klasie: liczby i zegar, dni tygodnia, teatr, pogoda, magnes, „Brzydkie kaczątko” i słówka z angielskiego. Na końcu zrób <b>Lot próbny</b>.',
   back: '../',
   levels: [
-    { id: 'odd', name: 'Co nie pasuje?', pl: 'obrazki, figury, liczby', col: '#EF5350', ring: '#FFF59D', gen: genOdd },
-    { id: 'pattern', name: 'Wzory i pary', pl: 'co dalej? co pasuje?', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
-    { id: 'riddle', name: 'Zagadki', pl: 'kto najwyższy? kto w środku?', col: '#26A69A', ring: '#FFCC80', gen: genRiddle },
+    { id: 'odd', name: 'Co nie pasuje?', pl: 'teatr, pogoda, magnes, liczby', col: '#EF5350', ring: '#FFF59D', gen: genOdd },
+    { id: 'pattern', name: 'Wzory i pary', pl: 'liczby, zegar, dni, słówka', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
+    { id: 'riddle', name: 'Zagadki', pl: 'roboty, zabawki, kalendarz', col: '#26A69A', ring: '#FFCC80', gen: genRiddle },
     { id: 'sudoku', name: 'Sudoku', pl: 'obrazki 4×4', col: '#42A5F5', ring: '#F48FB1', gen: genSudoku, n: 4 },
-    { id: 'maze', name: 'Labirynt', pl: 'zaprogramuj Robo strzałkami', col: '#FFB300', ring: '#90CAF9', gen: genMaze, n: 5 },
+    { id: 'maze', name: 'Tor przeszkód', pl: 'klocki i lawa: programuj strzałkami', col: '#FFB300', ring: '#90CAF9', gen: genMaze, n: 5 },
     { id: 'memory', name: 'Pary', pl: 'gra w pamięć', col: '#66BB6A', ring: '#CE93D8', gen: genMemory, n: 3, noTest: true },
   ],
   test: { name: 'Lot próbny', pl: '12 zadań ze wszystkiego (bez gry w pary), bez podpowiedzi.', n: 12 },
