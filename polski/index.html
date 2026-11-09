@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Robo i słowa – polski 2c</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wspolne/robo.css?v=4d2badfa">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="../wspolne/robo.js?v=08df0284"></script>
+<script>
+const { rnd, pick, shuffle, sample, coin } = Robo;
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const opts = (ans, pool, k = 3) => shuffle([ans, ...sample(pool.filter(x => x !== ans), k - 1)]).map(x => ({ html: x, ok: x === ans }));
+const emoji = e => `<div class="emoji">${e}</div>`;
+const stmt = s => `<div class="stmt">${s}</div>`;
+
+/* ---------- W teatrze ---------- */
+const THEATRE = [
+  { w: 'aktor', d: 'osoba, która odgrywa różne role', person: true },
+  { w: 'aktorka', d: 'kobieta, która gra role na scenie', person: true },
+  { w: 'widz', d: 'osoba, która ogląda przedstawienie', person: true },
+  { w: 'reżyser', d: 'osoba, która kieruje przygotowaniem przedstawienia', person: true },
+  { w: 'charakteryzator', d: 'osoba, która robi aktorom makijaż i fryzury', person: true },
+  { w: 'kurtyna', d: 'duża zasłona, która oddziela scenę od widowni' },
+  { w: 'scena', d: 'miejsce, na którym grają aktorzy' },
+  { w: 'bilet', d: 'trzeba go mieć, żeby wejść na przedstawienie', e: '🎟️' },
+  { w: 'lornetka', d: 'dzięki niej z daleka dobrze widać aktorów' },
+  { w: 'reflektor', d: 'mocna lampa, która oświetla scenę', e: '🔦' },
+  { w: 'fotel', d: 'na nim siedzi widz', e: '💺' },
+  { w: 'kostium', d: 'strój, w którym gra aktor', e: '👗' },
+  { w: 'peruka', d: 'sztuczne włosy' },
+  { w: 'maska', d: 'zakrywa twarz aktora', e: '🎭' },
+  { w: 'kukiełka', d: 'lalka, którą porusza aktor w teatrze lalek' },
+  { w: 'rekwizyt', d: 'przedmiot potrzebny aktorom na scenie' },
+  { w: 'głośnik', d: 'słychać z niego muzykę i dźwięki', e: '🔊' },
+];
+const TW = THEATRE.map(x => x.w);
+function genTheatre(i) {
+  const mode = i % 3;
+  if (mode === 1) {
+    const it = pick(THEATRE.filter(x => x.e));
+    return { key: 'te' + it.w, t: 'Co to jest?', p: 'W teatrze.', say: 'Co to jest?', prompt: emoji(it.e), cls: 'three',
+      after: `To ${it.w} – ${it.d}.`, options: opts(it.w, THEATRE.filter(x => !x.person).map(x => x.w)) };
+  }
+  const it = pick(mode === 2 ? THEATRE.filter(x => x.person) : THEATRE);
+  const twin = { aktor: 'aktorka', aktorka: 'aktor' }[it.w];          // their descriptions overlap – never offer both
+  const pool = (mode === 2 ? THEATRE.filter(x => x.person) : THEATRE).filter(x => x.w !== twin), q = mode === 2 ? `Kto to jest? ${cap(it.d)}.` : `${cap(it.d)}. Co to jest?`;
+  return { key: 'td' + it.w, t: mode === 2 ? 'Kto to jest?' : 'Co to jest?', p: 'Przeczytaj opis i wybierz słowo.', say: q,
+    prompt: stmt(`${cap(it.d)}.`), cls: 'three', after: `${cap(it.w)} – ${it.d}.`, options: opts(it.w, pool.map(x => x.w)) };
+}
+
+/* ---------- Pogoda ---------- */
+const INSTR = [
+  { w: 'termometr', gen: 'temperatury', acc: 'temperaturę', e: '🌡️' },
+  { w: 'wiatromierz', gen: 'prędkości wiatru', acc: 'prędkość wiatru', e: '💨' },
+  { w: 'deszczomierz', gen: 'ilości opadów', acc: 'ilość opadów', e: '🌧️' },
+  { w: 'barometr', gen: 'ciśnienia', acc: 'ciśnienie', e: '⏲️' },
+];
+const WEATHER = [['☀️', 'Świeci słońce.'], ['🌧️', 'Pada deszcz.'], ['❄️', 'Pada śnieg.'], ['⛈️', 'Jest burza.'], ['💨', 'Wieje wiatr.'], ['🌫️', 'Jest mgła.'], ['☁️', 'Jest pochmurno.']];
+function genWeather(i) {
+  const mode = i % 4;
+  if (mode === 0) {
+    const it = pick(INSTR), q = `Do czego służy ${it.w}?`;
+    return { key: 'w0' + it.w, t: q, p: 'Przyrządy do pomiaru pogody.', say: q, prompt: emoji(it.e), cls: 'list',
+      after: `${cap(it.w)} służy do pomiaru ${it.gen}.`, options: opts(`do pomiaru ${it.gen}`, INSTR.map(x => `do pomiaru ${x.gen}`)) };
+  }
+  if (mode === 1) {
+    const it = pick(INSTR), q = `Czym mierzymy ${it.acc}?`;
+    return { key: 'w1' + it.w, t: q, p: 'Wybierz przyrząd.', say: q, prompt: '', cls: 'three',
+      after: `${cap(it.acc)} mierzymy ${it.w}em.`, review: `${it.w} – ${it.acc}`, options: opts(it.w, INSTR.map(x => x.w)) };
+  }
+  if (mode === 2) {
+    const q = 'Kto przygotowuje prognozę pogody?';
+    return { key: 'w2', t: q, p: 'Zawody.', say: q, prompt: emoji('⛅'), cls: 'three', after: 'Synoptyk przygotowuje prognozę pogody.',
+      options: opts('synoptyk', ['synoptyk', 'reżyser', 'widz', 'charakteryzator']) };
+  }
+  const [e, ans] = pick(WEATHER);
+  return { key: 'w3' + e, t: 'Jaka jest pogoda?', p: 'Wybierz zdanie.', say: 'Jaka jest pogoda?', prompt: emoji(e), cls: 'list', after: ans,
+    options: opts(ans, WEATHER.map(x => x[1])) };
+}
+
+/* ---------- Magnes ---------- */
+const YES = [['📎', 'spinacz'], ['🔑', 'klucz'], ['✂️', 'nożyczki'], ['🔩', 'śrubę'], ['⛓️', 'łańcuch'], ['🧷', 'agrafkę']];
+const NO = [['✏️', 'ołówek'], ['🍎', 'jabłko'], ['🧸', 'misia'], ['📄', 'kartkę'], ['🧦', 'skarpetkę'], ['🧽', 'gąbkę'], ['🎈', 'balon'], ['🪵', 'kawałek drewna']];
+function magnets(left, right) {           // left/right = pole letters facing each other
+  const other = p => p === 'N' ? 'S' : 'N', col = p => p === 'N' ? '#E53935' : '#1E88E5';
+  const bar = (x, a, b) => `<rect x="${x}" y="10" width="50" height="40" fill="${col(a)}" stroke="#333" stroke-width="2.5"/>
+     <rect x="${x + 50}" y="10" width="50" height="40" fill="${col(b)}" stroke="#333" stroke-width="2.5"/>
+     <text x="${x + 25}" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#fff" font-family="Fredoka, sans-serif">${a}</text>
+     <text x="${x + 75}" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#fff" font-family="Fredoka, sans-serif">${b}</text>`;
+  return `<svg viewBox="0 0 250 60" style="width:min(100%,420px)" aria-label="magnesy">${bar(5, other(left), left)}${bar(145, right, other(right))}</svg>`;
+}
+const FACTS = [
+  ['Magnes przyciąga przedmioty z…', 'żelaza i stali', ['żelaza i stali', 'drewna i papieru', 'plastiku i gumy'], 'Magnes przyciąga przedmioty z żelaza i stali.'],
+  ['Ile biegunów ma magnes?', '2', ['1', '2', '4'], 'Magnes ma dwa bieguny: północny N i południowy S.'],
+  ['Biegun północny oznaczamy literą…', 'N', ['N', 'S', 'P'], 'Biegun północny to N.'],
+  ['Biegun południowy oznaczamy literą…', 'S', ['N', 'S', 'P'], 'Biegun południowy to S.'],
+];
+function genMagnet(i) {
+  const mode = i % 3;
+  if (mode === 0) {
+    const yes = coin(), [e, w] = pick(yes ? YES : NO), q = `Czy magnes przyciągnie ${w}?`;
+    return { key: 'm0' + w, t: q, p: 'Pomyśl, z czego to jest zrobione.', say: q, prompt: emoji(e), cls: 'two',
+      after: yes ? 'Tak! Magnes przyciąga przedmioty z żelaza i stali.' : 'Nie. Magnes przyciąga tylko przedmioty z żelaza i stali.',
+      options: [{ html: 'Tak, przyciągnie', ok: yes }, { html: 'Nie przyciągnie', ok: !yes }] };
+  }
+  if (mode === 1) {
+    const l = pick(['N', 'S']), r = pick(['N', 'S']), same = l === r;
+    return { key: 'm1' + l + r, t: 'Co zrobią te magnesy?', p: 'Spójrz na bieguny, które są blisko siebie.', say: 'Co zrobią te magnesy?',
+      prompt: magnets(l, r), cls: 'two', after: same ? 'Takie same bieguny się odpychają.' : 'Różne bieguny się przyciągają.',
+      options: [{ html: 'Przyciągną się', ok: !same }, { html: 'Odepchną się', ok: same }] };
+  }
+  const [q, ans, o, aft] = pick(FACTS);
+  return { key: 'm2' + q, t: q, p: 'Magnes.', say: q, prompt: magnets('S', 'N'), cls: 'three', after: aft, options: opts(ans, o) };
+}
+
+/* ---------- Samogłoski ---------- */
+const VOW = 'aąeęioóuy';
+const VWORDS = ['kurtyna', 'aktor', 'bilet', 'scena', 'maska', 'lornetka', 'fotel', 'magnes', 'barometr', 'termometr', 'sobota', 'środa',
+                'wtorek', 'czwartek', 'peruka', 'synoptyk', 'reżyser', 'żelazo', 'głośnik', 'pogoda', 'kropka', 'pytajnik', 'ołówek', 'góra'];
+const LETTERS_C = ['b', 'c', 'd', 'f', 'g', 'h', 'k', 'l', 'ł', 'm', 'n', 'ń', 'p', 'r', 's', 'ś', 't', 'w', 'z', 'ż', 'ź', 'ć'];
+function genVowels(i) {
+  if (i % 3 === 2) {
+    const v = coin(), L = v ? pick([...VOW]) : pick(LETTERS_C), q = `Czy „${L}” to samogłoska?`;
+    return { key: 'v1' + L, t: q, p: 'Samogłoski: a, ą, e, ę, i, o, ó, u, y.', say: `Czy litera ${L} to samogłoska?`, prompt: `<div class="eq">${L}</div>`, cls: 'two',
+      after: v ? `Tak, ${L} to samogłoska.` : `Nie, ${L} to spółgłoska.`, review: 'a, ą, e, ę, i, o, ó, u, y',
+      options: [{ html: 'Tak', ok: v }, { html: 'Nie', ok: !v }] };
+  }
+  const w = pick(VWORDS), letters = [...w], found = letters.filter(l => VOW.includes(l));
+  return { key: 'v0' + w, kind: 'multi', t: 'Dotknij wszystkich samogłosek', p: 'Samogłoski: a, ą, e, ę, i, o, ó, u, y.', say: w,
+    prompt: '', after: `W słowie ${w} samogłoski to: ${found.join(', ')}.`, review: `${w}: ${found.join(', ')}`,
+    tiles: letters.map(l => ({ html: l, ok: VOW.includes(l) })) };
+}
+
+/* ---------- Rodzaje zdań ---------- */
+const SENT = {
+  '.': ['Aktor gra na scenie', 'Widz kupił bilet do teatru', 'Dziś pada deszcz', 'Magnes przyciąga spinacz', 'Termometr mierzy temperaturę', 'Kurtyna jest czerwona', 'Synoptyk przygotował prognozę pogody'],
+  '?': ['Czy pójdziesz ze mną do teatru', 'Jaka jest dziś pogoda', 'Gdzie jest mój bilet', 'Kto gra główną rolę', 'Czy magnes przyciąga drewno', 'Ile jest samogłosek'],
+  '!': ['Zamknij okno', 'Usiądź na swoim fotelu', 'Uważaj na schodach', 'Podaj mi lornetkę', 'Wyłącz telefon w teatrze', 'Posłuchaj uważnie'],
+};
+const TYPE = { '.': 'oznajmujące', '?': 'pytające', '!': 'rozkazujące' };
+const MARK = { '.': 'kropka', '?': 'pytajnik', '!': 'wykrzyknik', ',': 'przecinek' };
+function genSentences(i) {
+  const mode = i % 3, m = pick(['.', '?', '!']), s = pick(SENT[m]);
+  if (mode === 0) return { key: 'z0' + s, t: 'Jaki znak postawisz na końcu?', p: 'Kropka, pytajnik czy wykrzyknik?', say: s,
+    prompt: stmt(`${s}<span class="gap"></span>`), cls: 'three', after: `${s}${m} To zdanie ${TYPE[m]}.`, review: `${s}${m}`,
+    options: ['.', '?', '!'].map(x => ({ html: `<span style="font-size:44px;line-height:1">${x}</span>`, ok: x === m })) };
+  if (mode === 1) return { key: 'z1' + s, t: 'Jakie to zdanie?', p: '. oznajmujące · ? pytające · ! rozkazujące', say: 'Jakie to zdanie?',
+    prompt: stmt(`${s}${m}`), cls: 'three', after: `To zdanie ${TYPE[m]} – kończy się znakiem: ${MARK[m]}.`,
+    options: Object.values(TYPE).map(x => ({ html: x, ok: x === TYPE[m] })) };
+  const k = pick(['.', '?', '!', ',']);
+  return { key: 'z2' + k, t: 'Jak nazywa się ten znak?', p: 'Znaki interpunkcyjne.', say: 'Jak nazywa się ten znak?',
+    prompt: `<div class="eq" style="font-size:110px;line-height:1">${k}</div>`, cls: 'words', after: `To ${MARK[k]}.`,
+    options: shuffle(Object.values(MARK)).map(x => ({ html: x, ok: x === MARK[k] })) };
+}
+
+/* ---------- Dyktando ---------- */
+const DICT = [
+  ['kurtyna', 'zasłona w teatrze'], ['reżyser', 'kieruje przedstawieniem'], ['aktorka', 'gra role na scenie'], ['lornetka', 'dzięki niej dobrze widać z daleka'],
+  ['bilet', 'potrzebny, żeby wejść do teatru'], ['widz', 'ogląda przedstawienie'], ['magnes', 'przyciąga żelazo i stal'], ['żelazo', 'metal, który przyciąga magnes'],
+  ['biegun', 'magnes ma dwa: N i S'], ['termometr', 'mierzy temperaturę'], ['barometr', 'mierzy ciśnienie'], ['synoptyk', 'przygotowuje prognozę pogody'],
+  ['piątek', 'dzień przed sobotą'], ['sobota', 'dzień po piątku'], ['środa', 'dzień po wtorku'], ['wtorek', 'dzień po poniedziałku'],
+  ['czwartek', 'dzień po środzie'], ['kropka', 'znak na końcu zdania oznajmującego'], ['pytajnik', 'znak na końcu pytania'],
+];
+const WEAK = ['piątek', 'sobota', 'reżyser', 'żelazo', 'kurtyna', 'synoptyk'];
+function genDictation() {
+  const [w, hint] = pick(Math.random() < .4 ? DICT.filter(d => WEAK.includes(d[0])) : DICT);
+  return { key: 'k' + w, kind: 'spell', word: w, t: 'Dyktando: ułóż słowo', p: 'Posłuchaj i ułóż z literek (możesz pisać na klawiaturze).',
+    say: w, prompt: stmt(`<span style="color:#6b7f8c">Podpowiedź:</span> ${hint}`), after: w };
+}
+
+/* ---------- Lektura: Brzydkie kaczątko (H. Ch. Andersen) ---------- */
+const BOOK = '„Brzydkie kaczątko”';
+const BK_FACTS = [
+  ['Kto napisał baśń „Brzydkie kaczątko”?', 'Hans Christian Andersen', ['Hans Christian Andersen', 'Jan Brzechwa', 'Julian Tuwim'], 'Baśń napisał Hans Christian Andersen.'],
+  ['„Brzydkie kaczątko” to…', 'baśń', ['baśń', 'wiersz', 'komiks'], '„Brzydkie kaczątko” to baśń.'],
+  ['Kim okazało się brzydkie kaczątko?', 'pięknym łabędziem', ['pięknym łabędziem', 'dużą kaczką', 'szarą gęsią'], 'Brzydkie kaczątko okazało się pięknym łabędziem.'],
+  ['Gdzie wykluło się kaczątko?', 'na wiejskim podwórku', ['na wiejskim podwórku', 'w królewskim zamku', 'w dużym mieście'], 'Kaczątko wykluło się na wiejskim podwórku, przy stawie.'],
+  ['W jakich porach roku dzieje się akcja?', 'wiosną, latem, jesienią i zimą', ['wiosną, latem, jesienią i zimą', 'tylko latem', 'tylko zimą'], 'Akcja trwa przez wszystkie pory roku.'],
+  ['Dlaczego kaczątko uciekło z podwórka?', 'bo inni mu dokuczali', ['bo inni mu dokuczali', 'bo chciało zobaczyć morze', 'bo zgubiło mamę'], 'Kaczątko uciekło, bo inni mu dokuczali.'],
+  ['Która pora roku była dla kaczątka najtrudniejsza?', 'zima', ['zima', 'wiosna', 'lato'], 'Zima była dla kaczątka najtrudniejsza.'],
+  ['Kogo kaczątko spotkało na końcu baśni?', 'łabędzie', ['łabędzie', 'kury', 'lisa'], 'Na końcu kaczątko spotkało łabędzie.'],
+  ['Jakie jest przesłanie baśni?', 'Nie można oceniać innych po wyglądzie.', ['Nie można oceniać innych po wyglądzie.', 'Zawsze trzeba być najszybszym.', 'Zimą nie wolno wychodzić z domu.'], 'Nie można oceniać innych po wyglądzie. Każdy jest wyjątkowy i ma swoją wartość.'],
+  ['Gdzie wędrowało kaczątko?', 'nad kanałami, jeziorami i w lesie', ['nad kanałami, jeziorami i w lesie', 'po górach i pustyni', 'po ulicach miasta'], 'Kaczątko wędrowało nad kanałami, jeziorami i przez lasy.'],
+];
+const BK_TF = [
+  ['Kaczątko było inne niż jego rodzeństwo.', true], ['Wszyscy na podwórku lubili kaczątko.', false],
+  ['Kaczątko przez pewien czas wędrowało samotnie.', true], ['Na końcu kaczątko zamieniło się w kurę.', false],
+  ['Kaczątko przetrwało trudną zimę.', true], ['Łabędzie przegoniły kaczątko.', false],
+  ['Matka kaczka jest bohaterką baśni.', true], ['Baśń napisał Jan Brzechwa.', false],
+];
+const BK_EVENTS = ['Wyklucie się brzydkiego kaczątka.', 'Inni dokuczają kaczątku.', 'Ucieczka z podwórka.', 'Samotna wędrówka przez różne miejsca.',
+                   'Zima i trudne chwile.', 'Spotkanie łabędzi.', 'Kaczątko okazuje się pięknym łabędziem.'];
+const BK_HEROES = ['matka kaczka', 'rodzeństwo kaczątka', 'łabędzie', 'kaczki z podwórka'];
+const NOT_HEROES = ['Czerwony Kapturek', 'Kot w butach', 'smok wawelski', 'krasnoludki', 'Pinokio', 'Kopciuszek'];
+const BK_SPELL = [['kaczątko', 'bohater baśni'], ['łabędź', 'piękny biały ptak'], ['podwórko', 'tu wykluło się kaczątko'], ['staw', 'woda przy podwórku'],
+                  ['jezioro', 'kaczątko wędrowało nad…'], ['zima', 'najtrudniejsza pora roku'], ['baśń', '„Brzydkie kaczątko” to…']];
+const BK_PICS = [['🦢', 'łabędź'], ['🦆', 'kaczka'], ['🐣', 'kaczątko']];
+function genBook(i) {
+  const mode = i % 6;
+  if (mode === 0) {
+    const [q, ans, o, aft] = pick(BK_FACTS);
+    return { key: 'b0' + q, t: q, p: `Lektura: ${BOOK}.`, say: q, prompt: emoji('🦢'), cls: 'list', after: aft, options: opts(ans, o) };
+  }
+  if (mode === 1) {
+    const [s, val] = pick(BK_TF);
+    return { key: 'b1' + s, t: 'Prawda czy fałsz?', p: `Lektura: ${BOOK}.`, say: s, prompt: stmt(s), cls: 'two',
+      after: val ? 'Prawda!' : 'Fałsz!', review: `${s} – ${val ? 'prawda' : 'fałsz'}`,
+      options: [{ html: 'Prawda', ok: val }, { html: 'Fałsz', ok: !val }] };
+  }
+  if (mode === 2) {
+    const k = rnd(BK_EVENTS.length - 1), ans = BK_EVENTS[k + 1];
+    const others = sample(BK_EVENTS.filter((_, j) => j !== k && j !== k + 1), 2);
+    return { key: 'b2' + k, t: 'Co wydarzyło się potem?', p: 'Wydarzenia po kolei.', say: `Co wydarzyło się po tym: ${BK_EVENTS[k]}`,
+      prompt: stmt(BK_EVENTS[k]), cls: 'list', after: `Potem: ${ans}`, review: `${BK_EVENTS[k]} → ${ans}`,
+      options: shuffle([ans, ...others]).map(x => ({ html: x, ok: x === ans })) };
+  }
+  if (mode === 3) {
+    const [a, b] = sample([...BK_EVENTS.keys()], 2), first = BK_EVENTS[Math.min(a, b)];
+    return { key: 'b3' + Math.min(a, b) + Math.max(a, b), t: 'Co wydarzyło się wcześniej?', p: 'Wydarzenia po kolei.', say: 'Co wydarzyło się wcześniej?',
+      prompt: '', cls: 'list', after: `Najpierw: ${first}`, options: shuffle([BK_EVENTS[a], BK_EVENTS[b]]).map(x => ({ html: x, ok: x === first })) };
+  }
+  if (mode === 4) {
+    if (coin()) {
+      const [e, w] = pick(BK_PICS);
+      return { key: 'b4' + w, t: 'Kto to jest?', p: `Bohaterowie baśni ${BOOK}.`, say: 'Kto to jest?', prompt: emoji(e), cls: 'three',
+        after: `To ${w}.`, options: BK_PICS.map(x => ({ html: x[1], ok: x[1] === w })) };
+    }
+    const h = pick(BK_HEROES), q = `Kto jest bohaterem baśni ${BOOK}?`;
+    return { key: 'b5' + h, t: q, p: 'Wybierz jedną odpowiedź.', say: q, prompt: '', cls: 'three', after: `Tak – ${h}.`,
+      options: shuffle([h, ...sample(NOT_HEROES, 2)]).map(x => ({ html: x, ok: x === h })) };
+  }
+  const [w, hint] = pick(BK_SPELL);
+  return { key: 'b6' + w, kind: 'spell', word: w, t: 'Ułóż słowo z baśni', p: 'Posłuchaj i ułóż z literek.', say: w,
+    prompt: stmt(`<span style="color:#6b7f8c">Podpowiedź:</span> ${hint}`), after: w };
+}
+
+Robo.start({
+  id: 'robo-pol-2c', lang: 'pl-PL', rate: .95,
+  title: 'Robo i słowa', sub: 'Polski i przyroda · klasa 2c',
+  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety: teatr, pogodę, magnesy, samogłoski, zdania, dyktando i lekturę „Brzydkie kaczątko”. Zbieraj gwiazdki ★, a na końcu zrób <b>Lot próbny</b>.',
+  back: '../',
+  levels: [
+    { id: 'theatre', name: 'W teatrze', pl: 'słowa z teatru', col: '#EF5350', ring: '#FFF59D', gen: genTheatre },
+    { id: 'weather', name: 'Pogoda', pl: 'termometr, synoptyk…', col: '#42A5F5', ring: '#FFCC80', gen: genWeather },
+    { id: 'magnet', name: 'Magnes', pl: 'przyciąganie, bieguny', col: '#AB47BC', ring: '#90CAF9', gen: genMagnet },
+    { id: 'vowels', name: 'Samogłoski', pl: 'a, ą, e, ę, i, o, ó, u, y', col: '#66BB6A', ring: '#F48FB1', gen: genVowels },
+    { id: 'sentences', name: 'Zdania', pl: '. ? ! – rodzaje zdań', col: '#FFB300', ring: '#B39DDB', gen: genSentences },
+    { id: 'dictation', name: 'Dyktando', pl: 'pisownia trudnych słów', col: '#26A69A', ring: '#FFAB91', gen: genDictation },
+    { id: 'book-kaczatko', name: 'Lektura', pl: '„Brzydkie kaczątko”', col: '#90CAF9', ring: '#FFF59D', gen: genBook },
+  ],
+  test: { name: 'Lot próbny', pl: 'Sprawdzian próbny: 15 pytań ze wszystkiego, bez podpowiedzi.', n: 15 },
+});
+</script>
+</body>
+</html>

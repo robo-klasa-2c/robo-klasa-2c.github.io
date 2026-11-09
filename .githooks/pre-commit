@@ -1,0 +1,17 @@
+#!/bin/sh
+# Cache busting for GitHub Pages (it serves files with max-age=600).
+# Every page links the shared files as robo.js?v=<hash of the staged file>, so when a shared
+# file changes its URL changes too and a normal reload (F5) fetches the new version.
+# Runs automatically before each commit (git config core.hooksPath .githooks);
+# can also be run by hand: sh .githooks/pre-commit
+cd "$(git rev-parse --show-toplevel)" || exit 1
+for f in robo.js robo.css; do
+  v=$(git rev-parse --short=8 ":wspolne/$f" 2>/dev/null) || continue
+  for p in $(git ls-files '*.html'); do
+    grep -q "wspolne/$f" "$p" || continue
+    cp "$p" "$p.bak"
+    sed -i -E "s#(wspolne/$f)(\?v=[0-9a-f]+)?\"#\1?v=$v\"#g" "$p"
+    if cmp -s "$p" "$p.bak"; then rm -f "$p.bak"; else rm -f "$p.bak"; git add "$p"; echo "version $f?v=$v -> $p"; fi
+  done
+done
+exit 0

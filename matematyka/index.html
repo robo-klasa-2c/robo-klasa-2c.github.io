@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Robo liczy – matematyka 2c</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wspolne/robo.css?v=4d2badfa">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="../wspolne/robo.js?v=08df0284"></script>
+<script>
+const { rnd, pick, shuffle, sample, coin, pt } = Robo;
+
+/* ---------- helpers ---------- */
+const between = (a, b) => a + rnd(b - a + 1);
+function plural(n, one, few, many) {
+  if (n === 1) return one;
+  const d = n % 10, h = n % 100;
+  return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? few : many;
+}
+function numOpts(ans, k = 3, lo = 0, hi = 20, extra = []) {
+  const cand = new Set();
+  [...extra, ans + 1, ans - 1, ans + 2, ans - 2, ans + 10, ans - 10].forEach(x => { if (x !== ans && x >= lo && x <= hi) cand.add(x); });
+  const arr = sample([...cand], k - 1);
+  while (arr.length < k - 1) { const x = lo + rnd(hi - lo + 1); if (x !== ans && !arr.includes(x)) arr.push(x); }
+  return shuffle([ans, ...arr]).map(x => ({ html: String(x), ok: x === ans }));
+}
+const wordOpts = (ans, all) => shuffle([ans, ...sample(all.filter(w => w !== ans), 2)]).map(w => ({ html: w, ok: w === ans }));
+const eq = (html, small) => `<div class="eq"${small ? ' style="font-size:clamp(28px,6.5vw,52px)"' : ''}>${html}</div>`;
+const Q = '<span class="q">?</span>';
+
+/* ---------- pictures ---------- */
+function blocks(n) {                      // tens as rods of 10, ones as single cubes
+  const d = Math.floor(n / 10), j = n % 10;
+  let s = '', x = 4;
+  for (let i = 0; i < d; i++) {
+    for (let k = 0; k < 10; k++) s += `<rect x="${x}" y="${4 + k * 9}" width="9" height="9" fill="#42A5F5" stroke="#1565C0" stroke-width="1"/>`;
+    x += 14;
+  }
+  x += 8;
+  for (let k = 0; k < j; k++) s += `<rect x="${x + (k % 5) * 12}" y="${85 - Math.floor(k / 5) * 12}" width="9" height="9" fill="#FFB300" stroke="#E65100" stroke-width="1"/>`;
+  const w = x + 5 * 12 + 2;
+  return `<svg viewBox="0 0 ${w} 98" style="height:140px;width:auto;max-width:100%" aria-hidden="true">${s}</svg>`;
+}
+function clock(h, m) {
+  let s = `<circle cx="50" cy="50" r="46" fill="#fff" stroke="#1E88E5" stroke-width="5"/>`;
+  for (let i = 0; i < 60; i++) {
+    const a = i / 60 * 2 * Math.PI - Math.PI / 2, [x1, y1] = pt(50, 50, 43, a), [x2, y2] = pt(50, 50, i % 5 ? 41 : 39, a);
+    s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#90A4AE" stroke-width="${i % 5 ? .8 : 1.6}"/>`;
+  }
+  for (let i = 1; i <= 12; i++) {
+    const [x, y] = pt(50, 50, 32, i / 12 * 2 * Math.PI - Math.PI / 2);
+    s += `<text x="${x}" y="${(+y + 4.3).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" font-family="Andika, sans-serif" fill="#263238">${i}</text>`;
+  }
+  const ma = m / 60 * 2 * Math.PI - Math.PI / 2, ha = ((h % 12) + m / 60) / 12 * 2 * Math.PI - Math.PI / 2;
+  const [hx, hy] = pt(50, 50, 21, ha), [mx, my] = pt(50, 50, 35, ma);
+  s += `<line x1="50" y1="50" x2="${hx}" y2="${hy}" stroke="#E53935" stroke-width="5" stroke-linecap="round"/>
+        <line x1="50" y1="50" x2="${mx}" y2="${my}" stroke="#1E88E5" stroke-width="3.2" stroke-linecap="round"/>
+        <circle cx="50" cy="50" r="3.5" fill="#FDD835" stroke="#333" stroke-width="1"/>`;
+  return `<svg viewBox="0 0 100 100" class="big" aria-label="zegar">${s}</svg>`;
+}
+function pairDots(n) {
+  const cols = Math.ceil(n / 2);
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const c = Math.floor(i / 2), r = i % 2;
+    s += `<circle cx="${12 + c * 22}" cy="${12 + r * 22}" r="8" fill="${n % 2 && i === n - 1 ? '#FF7043' : '#42A5F5'}" stroke="#333" stroke-width="1.2"/>`;
+  }
+  for (let c = 0; c < Math.floor(n / 2); c++) s += `<rect x="${2 + c * 22}" y="2" width="20" height="42" rx="10" fill="none" stroke="#9575CD" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+  return `<svg viewBox="0 0 ${cols * 22 + 4} 46" style="height:70px;width:auto;max-width:100%" aria-hidden="true">${s}</svg>`;
+}
+
+/* ---------- story problems (numbers keep Polish plural forms correct) ---------- */
+const STORY_ADD = [
+  (a, b) => [`Z dębu spadło ${a} żołędzi, a potem jeszcze ${b}. Ile żołędzi spadło razem?`, s => `Razem spadło ${s} żołędzi.`],
+  (a, b) => [`Ola miała ${a} naklejek. Dostała jeszcze ${b} naklejek. Ile naklejek ma teraz?`, s => `Ola ma teraz ${s} naklejek.`],
+  (a, b) => [`Na łące było ${a} motyli. Przyleciało jeszcze ${b} motyli. Ile motyli jest teraz na łące?`, s => `Na łące jest ${s} motyli.`],
+];
+const STORY_SUB = [
+  (a, b) => [`W przedziale pociągu było ${a} osób. Na stacji wysiadło ${b} osób. Ile osób zostało?`,
+             r => `${plural(r, 'Została', 'Zostały', 'Zostało')} ${r} ${plural(r, 'osoba', 'osoby', 'osób')}.`],
+  (a, b) => [`Kuba miał ${a} cukierków. Zjadł ${b} cukierków. Ile cukierków mu zostało?`,
+             r => `${plural(r, 'Został', 'Zostały', 'Zostało')} mu ${r} ${plural(r, 'cukierek', 'cukierki', 'cukierków')}.`],
+  (a, b) => [`Na drzewie siedziało ${a} wróbli. Odleciało ${b} wróbli. Ile wróbli zostało na drzewie?`,
+             r => `Na drzewie ${plural(r, 'został', 'zostały', 'zostało')} ${r} ${plural(r, 'wróbel', 'wróble', 'wróbli')}.`],
+];
+function story(add) {
+  if (add) {
+    const a = between(5, 10), b = between(5, Math.min(10, 20 - a)), s = a + b, [txt, aft] = pick(STORY_ADD)(a, b);
+    return { key: 'sa' + a + b, t: 'Zadanie z treścią', p: 'Przeczytaj i policz.', say: txt, prompt: `<div class="stmt">${txt}</div>`,
+      cls: 'three', after: `${a} + ${b} = ${s}. ${aft(s)}`, options: numOpts(s, 3, 0, 20) };
+  }
+  const a = between(10, 18), b = between(5, a - 1), r = a - b, [txt, aft] = pick(STORY_SUB)(a, b);
+  return { key: 'ss' + a + b, t: 'Zadanie z treścią', p: 'Przeczytaj i policz.', say: txt, prompt: `<div class="stmt">${txt}</div>`,
+    cls: 'three', after: `${a} − ${b} = ${r}. ${aft(r)}`, options: numOpts(r, 3, 0, 20) };
+}
+
+/* ---------- level generators ---------- */
+function genAdd(i) {
+  const mode = i % 5;
+  if (mode === 0) {
+    let a, b;
+    if (coin()) { a = between(3, 9); b = between(11 - a, 9); } else { a = between(11, 15); b = between(1, 19 - a); }
+    return { key: 'a0' + a + b, t: 'Oblicz sumę', p: 'Ile to jest?', say: `Ile to jest ${a} dodać ${b}?`,
+      prompt: eq(`${a} + ${b} = ${Q}`), cls: 'three', after: `${a} + ${b} = ${a + b}`, options: numOpts(a + b) };
+  }
+  if (mode === 1) {
+    const a = between(3, 12), b = between(2, Math.min(9, 20 - a)), s = a + b;
+    return { key: 'a1' + a + b, t: 'Jakiej liczby brakuje?', p: 'Uzupełnij składnik.', say: `${a} dodać ile równa się ${s}?`,
+      prompt: eq(`${a} + ${Q} = ${s}`), cls: 'three', after: `${a} + ${b} = ${s}, bo ${s} − ${a} = ${b}`, options: numOpts(b, 3, 0, 10) };
+  }
+  if (mode === 2) {
+    const a = between(6, 9), b = between(11 - a, 9), r = b - (10 - a);
+    return { key: 'a2' + a + b, t: 'Dodaj przez dziesiątkę', p: `Najpierw dopełnij do 10.`, say: `${a} dodać ${b} to ${a} dodać ${10 - a} dodać ile?`,
+      prompt: eq(`${a} + ${b} = ${a} + ${10 - a} + ${Q}`, true), cls: 'three',
+      after: `${a} + ${b} = ${a} + ${10 - a} + ${r} = 10 + ${r} = ${a + b}`, options: numOpts(r, 3, 0, 9) };
+  }
+  if (mode === 3) {
+    const a = between(2, 9), b = between(2, 9), s = a + b, which = pick(['a', 'b', 's']);
+    const hl = (v, w) => which === w ? `<span class="hl">${v}</span>` : v;
+    const ans = which === 's' ? 'suma' : 'składnik';
+    return { key: 'a3' + a + b + which, t: 'Jak się nazywa zaznaczona liczba?', p: 'Nazwy liczb w dodawaniu.', say: 'Jak się nazywa zaznaczona liczba?',
+      prompt: eq(`${hl(a, 'a')} + ${hl(b, 'b')} = ${hl(s, 's')}`), cls: 'three', after: 'składnik dodać składnik równa się suma',
+      review: 'składnik + składnik = suma', options: wordOpts(ans, ['składnik', 'suma', 'różnica']) };
+  }
+  return story(true);
+}
+function genSub(i) {
+  const mode = i % 6;
+  if (mode === 0) {
+    let a, b;
+    if (coin()) { a = between(11, 18); b = between(a - 9, 9); } else { a = between(11, 19); b = between(1, a % 10 || 1); }
+    return { key: 's0' + a + b, t: 'Oblicz różnicę', p: 'Ile to jest?', say: `Ile to jest ${a} odjąć ${b}?`,
+      prompt: eq(`${a} − ${b} = ${Q}`), cls: 'three', after: `${a} − ${b} = ${a - b}`, options: numOpts(a - b) };
+  }
+  if (mode === 1) {
+    const a = between(4, 10), b = between(1, a - 1);
+    return { key: 's1' + a + b, t: `Różnica liczb ${a} i ${b} to…`, p: 'Różnica to wynik odejmowania.', say: `Różnica liczb ${a} i ${b} to?`,
+      prompt: eq(`${a} i ${b} → ${a} − ${b} = ${Q}`, true), cls: 'three', after: `${a} − ${b} = ${a - b}`, options: numOpts(a - b, 3, 0, 10, [a + b]) };
+  }
+  if (mode === 2) {
+    const a = between(11, 17), j = a - 10, b = between(j + 1, 9), r = b - j;
+    return { key: 's2' + a + b, t: 'Odejmij przez dziesiątkę', p: 'Najpierw odejmij do 10.', say: `${a} odjąć ${b} to ${a} odjąć ${j} odjąć ile?`,
+      prompt: eq(`${a} − ${b} = ${a} − ${j} − ${Q}`, true), cls: 'three',
+      after: `${a} − ${b} = ${a} − ${j} − ${r} = 10 − ${r} = ${a - b}`, options: numOpts(r, 3, 0, 9) };
+  }
+  if (mode === 3) {
+    const a = between(5, 19), b = between(1, a - 1), r = a - b, which = pick(['a', 'b', 'r']);
+    const hl = (v, w) => which === w ? `<span class="hl">${v}</span>` : v;
+    const ans = { a: 'odjemna', b: 'odjemnik', r: 'różnica' }[which];
+    return { key: 's3' + a + b + which, t: 'Jak się nazywa zaznaczona liczba?', p: 'Nazwy liczb w odejmowaniu.', say: 'Jak się nazywa zaznaczona liczba?',
+      prompt: eq(`${hl(a, 'a')} − ${hl(b, 'b')} = ${hl(r, 'r')}`), cls: 'three', after: 'odjemna odjąć odjemnik równa się różnica',
+      review: 'odjemna − odjemnik = różnica', options: wordOpts(ans, ['odjemna', 'odjemnik', 'różnica']) };
+  }
+  if (mode === 4) {
+    const a = between(12, 19), b = between(2, 7), r = a - b;
+    return { key: 's4' + a + b, t: 'Sprawdź odejmowanie dodawaniem', p: 'Uzupełnij sprawdzenie.', say: `${a} odjąć ${b} równa się ${r}, bo ${r} dodać ${b} równa się ile?`,
+      prompt: eq(`${a} − ${b} = ${r}, bo ${r} + ${b} = ${Q}`, true), cls: 'three', after: `${r} + ${b} = ${a}`, options: numOpts(a, 3, 0, 20) };
+  }
+  return story(false);
+}
+function genTens(i) {
+  const n = between(10, 39), d = Math.floor(n / 10), j = n % 10, mode = i % 4;
+  const swapped = j * 10 + d;
+  if (mode === 0) return { key: 't0' + n, t: 'Jaka to liczba?', p: 'Niebieski słupek = 1 dziesiątka, żółta kostka = 1 jedność.', say: 'Jaka to liczba?',
+    prompt: blocks(n), cls: 'three', after: `${d} ${plural(d, 'dziesiątka', 'dziesiątki', 'dziesiątek')} i ${j} ${plural(j, 'jedność', 'jedności', 'jedności')} to ${n}`,
+    options: numOpts(n, 3, 10, 99, swapped !== n && j > 0 ? [swapped] : []) };
+  if (mode === 1) return { key: 't1' + n, t: `Ile dziesiątek ma liczba ${n}?`, p: 'Dziesiątki to pierwsza cyfra.', say: `Ile dziesiątek ma liczba ${n}?`,
+    prompt: eq(`<span class="hl">${d}</span>${j}`), cls: 'three', after: `Liczba ${n} ma ${d} ${plural(d, 'dziesiątkę', 'dziesiątki', 'dziesiątek')}.`,
+    options: numOpts(d, 3, 0, 9, [j]) };
+  if (mode === 2) return { key: 't2' + n, t: `Ile jedności ma liczba ${n}?`, p: 'Jedności to ostatnia cyfra.', say: `Ile jedności ma liczba ${n}?`,
+    prompt: eq(`${d}<span class="hl">${j}</span>`), cls: 'three', after: `Liczba ${n} ma ${j} ${plural(j, 'jedność', 'jedności', 'jedności')}.`,
+    options: numOpts(j, 3, 0, 9, [d]) };
+  return { key: 't3' + n, t: 'Jaka to liczba?', p: 'd – dziesiątki, j – jedności.', say: `${d} dziesiątki i ${j} jedności to jaka liczba?`,
+    prompt: eq(`${d} d  i  ${j} j`), cls: 'three', after: `${d} d i ${j} j to ${n}`,
+    options: numOpts(n, 3, 1, 99, swapped !== n && j > 0 ? [swapped, d + j] : [d + j]) };
+}
+
+const NOM = ['', 'pierwsza', 'druga', 'trzecia', 'czwarta', 'piąta', 'szósta', 'siódma', 'ósma', 'dziewiąta', 'dziesiąta', 'jedenasta', 'dwunasta'];
+const LOC = ['', 'pierwszej', 'drugiej', 'trzeciej', 'czwartej', 'piątej', 'szóstej', 'siódmej', 'ósmej', 'dziewiątej', 'dziesiątej', 'jedenastej', 'dwunastej'];
+const nextH = h => h % 12 + 1;
+function phrase(h, m) {
+  if (m === 0) return `godzina ${NOM[h]}`;
+  if (m === 15) return `kwadrans po ${LOC[h]}`;
+  if (m === 30) return `wpół do ${LOC[nextH(h)]}`;
+  return `za kwadrans ${NOM[nextH(h)]}`;
+}
+const digital = (h, m) => `${h}:${m === 0 ? '00' : m}`;
+const CLOCK_FACTS = [
+  ['Ile minut ma kwadrans?', '15', ['15', '30', '45'], 'Kwadrans to 15 minut.'],
+  ['Ile minut ma pół godziny?', '30', ['15', '30', '50'], 'Pół godziny to 30 minut.'],
+  ['Ile minut ma godzina?', '60', ['30', '60', '100'], 'Godzina ma 60 minut.'],
+  ['Co pokazuje krótka wskazówka?', 'godziny', ['godziny', 'minuty', 'sekundy'], 'Krótka wskazówka pokazuje godziny.'],
+  ['Co pokazuje długa wskazówka?', 'minuty', ['godziny', 'minuty', 'dni'], 'Długa wskazówka pokazuje minuty.'],
+  ['Długa wskazówka stoi na 3. Ile minut minęło?', '15', ['3', '15', '30'], '3 razy 5 minut to 15 minut.'],
+  ['Długa wskazówka stoi na 6. Ile minut minęło?', '30', ['6', '30', '60'], '6 razy 5 minut to 30 minut.'],
+  ['Długa wskazówka stoi na 9. Ile minut minęło?', '45', ['9', '40', '45'], '9 razy 5 minut to 45 minut.'],
+  ['Długa wskazówka stoi na 4. Ile minut minęło?', '20', ['4', '20', '40'], '4 razy 5 minut to 20 minut.'],
+];
+function genClock(i) {
+  const h = between(1, 12), m = pick([0, 15, 30, 45]), mode = i % 4;
+  const others = [0, 15, 30, 45].filter(x => x !== m);
+  if (mode === 0) {
+    const opts = shuffle([[h, m], [h, pick(others)], [nextH(h), m]].map(([a, b]) => phrase(a, b)));
+    const ans = phrase(h, m);
+    return { key: 'c0' + h + m, t: 'Która godzina?', p: 'Najpierw krótka wskazówka (godziny), potem długa (minuty).', say: 'Która godzina?',
+      prompt: clock(h, m), cls: 'list', after: `Jest ${ans}.`, options: [...new Set(opts)].map(o => ({ html: o, ok: o === ans })) };
+  }
+  if (mode === 1) {
+    const ans = digital(h, m), opts = [...new Set([ans, digital(h, pick(others)), digital(nextH(h), m), digital(h === 1 ? 12 : h - 1, m)])].slice(0, 3);
+    return { key: 'c1' + h + m, t: 'Która godzina?', p: 'Wybierz zapis na zegarze elektronicznym.', say: 'Która godzina?',
+      prompt: clock(h, m), cls: 'three', after: `${ans}, czyli ${phrase(h, m)}.`, options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
+  }
+  if (mode === 2) {
+    const mm = pick([15, 30, 45]), ans = digital(h, mm), trap = mm === 15 ? digital(nextH(h), 15) : mm === 30 ? digital(nextH(h), 30) : digital(nextH(h), 45);
+    const opts = [...new Set([ans, trap, digital(h, mm === 30 ? 15 : 30)])];
+    return { key: 'c2' + h + mm, t: `Która to godzina: „${phrase(h, mm)}”?`, p: 'Uwaga: „wpół do czwartej” to jeszcze trzecia!', say: `Która to godzina: ${phrase(h, mm)}?`,
+      prompt: `<div class="stmt">${phrase(h, mm)}</div>`, cls: 'three', after: `${phrase(h, mm)} to ${ans}.`, options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
+  }
+  const [q, ans, opts, aft] = pick(CLOCK_FACTS);
+  return { key: 'c3' + q, t: q, p: 'Zegar wskazówkowy.', say: q, prompt: clock(3, 0), cls: 'three', after: aft,
+    options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
+}
+function genEven(i) {
+  const mode = i % 3;
+  if (mode < 2) {
+    const n = between(1, mode === 0 ? 14 : 20), even = n % 2 === 0;
+    return { key: 'e0' + n, t: `Liczba ${n} jest…`, p: mode === 0 ? 'Połącz kropki w pary. Czy każda ma parę?' : 'Parzyste kończą się na 0, 2, 4, 6, 8.',
+      say: `Liczba ${n} jest parzysta czy nieparzysta?`, prompt: mode === 0 ? `<div class="row">${eq(String(n))}${pairDots(n)}</div>` : eq(String(n)), cls: 'two',
+      after: even ? `${n} to liczba parzysta.` : `${n} to liczba nieparzysta.`,
+      options: [{ html: 'parzysta', ok: even }, { html: 'nieparzysta', ok: !even }] };
+  }
+  const wantEven = coin(), pool = [];
+  for (let x = 1; x <= 20; x++) pool.push(x);
+  const good = pick(pool.filter(x => (x % 2 === 0) === wantEven)), bad = sample(pool.filter(x => (x % 2 === 0) !== wantEven), 2);
+  const word = wantEven ? 'parzysta' : 'nieparzysta';
+  return { key: 'e2' + good + word, t: `Która liczba jest ${word}?`, p: 'Wybierz jedną.', say: `Która liczba jest ${word}?`, prompt: '', cls: 'three',
+    after: `${good} to liczba ${word}.`, options: shuffle([good, ...bad]).map(x => ({ html: String(x), ok: x === good })) };
+}
+const DAYS = ['poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela'];
+const PO = ['poniedziałku', 'wtorku', 'środzie', 'czwartku', 'piątku', 'sobocie', 'niedzieli'];
+const PRZED = ['poniedziałkiem', 'wtorkiem', 'środą', 'czwartkiem', 'piątkiem', 'sobotą', 'niedzielą'];
+const ORD = ['pierwszy', 'drugi', 'trzeci', 'czwarty', 'piąty', 'szósty', 'siódmy'];
+const dayOpts = ans => shuffle([ans, ...sample(DAYS.filter(d => d !== ans), 2)]).map(d => ({ html: d, ok: d === ans }));
+function genDays(i) {
+  const k = rnd(7), mode = i % 4;
+  if (mode === 0) { const ans = DAYS[(k + 1) % 7];
+    return { key: 'd0' + k, t: `Jaki dzień jest po ${PO[k]}?`, p: 'Dni tygodnia po kolei.', say: `Jaki dzień jest po ${PO[k]}?`, prompt: '', cls: 'three',
+      after: `Po ${PO[k]} jest ${ans}.`, options: dayOpts(ans) }; }
+  if (mode === 1) { const ans = DAYS[(k + 6) % 7];
+    return { key: 'd1' + k, t: `Jaki dzień jest przed ${PRZED[k]}?`, p: 'Dni tygodnia po kolei.', say: `Jaki dzień jest przed ${PRZED[k]}?`, prompt: '', cls: 'three',
+      after: `Przed ${PRZED[k]} jest ${ans}.`, options: dayOpts(ans) }; }
+  if (mode === 2) return { key: 'd2' + k, t: `Który dzień tygodnia jest ${ORD[k]}?`, p: 'Tydzień zaczyna się w poniedziałek.', say: `Który dzień tygodnia jest ${ORD[k]}?`,
+    prompt: '', cls: 'three', after: `${ORD[k][0].toUpperCase() + ORD[k].slice(1)} dzień tygodnia to ${DAYS[k]}.`, options: dayOpts(DAYS[k]) };
+  const w = pick(Math.random() < .6 ? ['piątek', 'sobota', 'poniedziałek', 'środa'] : DAYS);
+  return { key: 'd3' + w, kind: 'spell', word: w, t: 'Ułóż nazwę dnia', p: 'Posłuchaj i ułóż z literek.', say: w,
+    prompt: `<div class="stmt">${DAYS.indexOf(w) + 1}. dzień tygodnia</div>`, after: w };
+}
+
+Robo.start({
+  id: 'robo-mat-2c', lang: 'pl-PL', rate: .95,
+  title: 'Robo liczy', sub: 'Matematyka · klasa 2c',
+  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety i zbieraj gwiazdki ★. Na końcu zrób <b>Lot próbny</b> – to taki sprawdzian ze wszystkiego.',
+  back: '../',
+  levels: [
+    { id: 'add', name: 'Dodawanie', pl: 'suma, składniki, przez 10', col: '#66BB6A', ring: '#FFF59D', gen: genAdd },
+    { id: 'sub', name: 'Odejmowanie', pl: 'różnica, odjemna, odjemnik', col: '#EF5350', ring: '#B3E5FC', gen: genSub },
+    { id: 'tens', name: 'Dziesiątki', pl: 'dziesiątki i jedności', col: '#42A5F5', ring: '#FFCC80', gen: genTens },
+    { id: 'clock', name: 'Zegar', pl: 'kwadrans, wpół do', col: '#FFB300', ring: '#CE93D8', gen: genClock },
+    { id: 'even', name: 'Parzyste', pl: 'parzyste i nieparzyste', col: '#AB47BC', ring: '#A5D6A7', gen: genEven },
+    { id: 'days', name: 'Dni tygodnia', pl: 'po kolei i pisownia', col: '#26A69A', ring: '#F48FB1', gen: genDays },
+  ],
+  test: { name: 'Lot próbny', pl: 'Sprawdzian próbny: 15 pytań ze wszystkiego, bez podpowiedzi.', n: 15 },
+});
+</script>
+</body>
+</html>
