@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Robo myśli – gry logiczne 2c</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wspolne/robo.css?v=4d2badfa">
+<style>
+  /* Page-only pieces: odd-one-out shapes, patterns, riddles and the three mini-games (sudoku, maze, memory). */
+  .custom { margin-top: 12px; }
+  .prompt:empty { min-height: 0; margin: 8px 0; }
+  .shape { width: 72px; height: 72px; }
+  .emo { font-size: 56px; line-height: 1; }
+  .riddle { font-size: clamp(20px, 3.8vw, 28px); font-weight: 700; line-height: 1.45; max-width: 640px; text-align: left; }
+  .riddle .row { justify-content: flex-start; gap: 6px; margin-top: 6px; font-size: 44px; }
+  .bot { width: 64px; height: 64px; margin: 0 auto; }
+  .opt .lbl { display: block; font-size: 16px; color: var(--muted); }
+  .opts.cols3 { grid-template-columns: repeat(3, 1fr); }
+  .groups { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .grp { border: 3px dashed #B0BEC5; border-radius: 16px; padding: 6px 8px; min-width: 52px; min-height: 60px; font-size: 30px;
+         display: flex; flex-wrap: wrap; justify-content: center; align-content: center; max-width: 150px; line-height: 1.1; }
+  .grp.q { font-family: var(--display); color: #FF7043; font-size: 40px; border-color: #FF7043; }
+  .arrows { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .arrows svg, .opt svg.arr { width: 58px; height: 58px; }
+  .arrows .qm { font-family: var(--display); font-size: 48px; color: #FF7043; width: 58px; text-align: center; }
+  .analogy { display: grid; grid-template-columns: auto auto auto; gap: 6px 14px; align-items: center; justify-content: center; font-size: 64px; line-height: 1.1; }
+  .analogy .to { font-size: 34px; color: #90A4AE; }
+  .analogy .qm { font-family: var(--display); color: #FF7043; font-size: 56px; text-align: center; }
+
+  /* sudoku */
+  .sdk { display: grid; grid-template-columns: repeat(4, auto); justify-content: center; gap: 5px; }
+  .sdk button { width: min(19vw, 74px); height: min(19vw, 74px); border-radius: 14px; border: 3px solid var(--line); background: #fff;
+                font-size: min(11vw, 44px); line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .sdk button.given { background: #EEF3F6; border-color: #EEF3F6; cursor: default; }
+  .sdk button.empty { border-style: dashed; }
+  .sdk button.sel { border: 4px solid var(--gold); background: #FFF8E1; }
+  .sdk button.done { background: #E8F5E9; border-color: #A5D6A7; animation: pop .35s; }
+  .sdk button.bad { animation: shake .4s; background: #FFEBEE; }
+  .sdk .c1 { margin-right: 9px; } .sdk .r1 { margin-bottom: 9px; }
+  .palette { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .palette button { width: 70px; height: 70px; border-radius: 18px; border: 0; background: #FFE082; box-shadow: 0 5px 0 #FFA000; font-size: 40px; padding: 0; }
+  .palette button.hint { animation: glow 1s infinite; }
+  .help { text-align: center; color: var(--muted); font-size: 15px; margin-top: 10px; }
+
+  /* maze */
+  .maze { display: flex; justify-content: center; }
+  .maze svg { width: min(100%, 300px); }
+  .maze.bump svg { animation: shake .4s; }
+  .prg { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; min-height: 46px; margin: 12px auto 0; max-width: 520px;
+         border: 3px dashed #B0BEC5; border-radius: 16px; padding: 5px; }
+  .prg svg { width: 32px; height: 32px; background: #E3F2FD; border-radius: 8px; padding: 2px; }
+  .prg svg.now { background: #FFE082; }
+  .prg .empty { color: var(--muted); font-size: 15px; align-self: center; }
+  .ctrl { display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px); gap: 8px; }
+  .pad button { border: 0; border-radius: 16px; background: #E3F2FD; box-shadow: 0 5px 0 #90CAF9; padding: 8px; }
+  .pad button svg { width: 100%; height: 100%; }
+  .pad .up { grid-column: 2; } .pad .left { grid-column: 1; grid-row: 2; } .pad .down { grid-column: 2; grid-row: 2; } .pad .right { grid-column: 3; grid-row: 2; }
+  .runrow { display: flex; flex-direction: column; gap: 10px; }
+  .runrow .btn { font-size: 18px; padding: 9px 18px; }
+  .runrow .btn.grey { background: #90A4AE; box-shadow: 0 5px 0 #607D8B; }
+  .pad button:disabled, .runrow button:disabled { opacity: .45; cursor: default; }
+
+  /* memory */
+  .mem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 460px; margin: 0 auto; }
+  .mem button { aspect-ratio: 1; border: 0; border-radius: 16px; font-size: min(10vw, 46px); padding: 0; display: flex; align-items: center; justify-content: center;
+                background: linear-gradient(145deg, #5C6BC0, #3949AB); box-shadow: 0 5px 0 #283593; transition: transform .15s; }
+  .mem button .back { width: 52%; height: 52%; }
+  .mem button.up { background: #fff; box-shadow: 0 5px 0 var(--line); border: 3px solid var(--line); }
+  .mem button.got { background: #E8F5E9; border: 3px solid #A5D6A7; box-shadow: 0 5px 0 #A5D6A7; cursor: default; animation: pop .35s; }
+  .mem button.hint { animation: glow 1s infinite; }
+
+  @media (max-width: 560px) {
+    .shape { width: 56px; height: 56px; } .emo { font-size: 46px; }
+    .analogy { font-size: 50px; } .arrows svg, .opt svg.arr { width: 46px; height: 46px; }
+    .grp { font-size: 24px; min-width: 44px; }
+    .pad { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); gap: 6px; }
+    .ctrl { gap: 10px; } .runrow { gap: 8px; } .runrow .btn { font-size: 16px; padding: 7px 12px; }
+    .maze svg { width: min(100%, 250px); }
+    .palette button { width: 62px; height: 62px; font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="../wspolne/robo.js?v=e84356e0"></script>
+<script>
+const { rnd, pick, shuffle, sample, coin } = Robo;
+const between = (a, b) => a + rnd(b - a + 1);
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const emo = e => `<span class="emo">${e}</span>`;
+function numOpts(ans, lo = 0, hi = 40) {
+  const cand = [...new Set([ans + 1, ans - 1, ans + 2, ans - 2, ans + 4])].filter(x => x !== ans && x >= lo && x <= hi);
+  return shuffle([ans, ...sample(cand, 2)]).map(x => ({ html: String(x), ok: x === ans }));
+}
+
+/* ---------- 1. Co nie pasuje? ---------- */
+const CATS = [
+  { pl: 'owoce', it: [['🍎', 'jabłko'], ['🍌', 'banan'], ['🍋', 'cytryna'], ['🍐', 'gruszka'], ['🍓', 'truskawka'], ['🍊', 'pomarańcza']] },
+  { pl: 'warzywa', it: [['🥕', 'marchewka'], ['🥦', 'brokuł'], ['🥒', 'ogórek'], ['🥔', 'ziemniak'], ['🧅', 'cebula'], ['🌽', 'kukurydza']] },
+  { pl: 'zwierzęta, które żyją w wodzie', it: [['🐟', 'ryba'], ['🐬', 'delfin'], ['🐙', 'ośmiornica'], ['🐳', 'wieloryb'], ['🦀', 'krab']] },
+  { pl: 'zwierzęta, które latają', it: [['🐦', 'ptak'], ['🦋', 'motyl'], ['🐝', 'pszczoła'], ['🦉', 'sowa'], ['🦅', 'orzeł']] },
+  { pl: 'pojazdy', it: [['🚗', 'samochód'], ['🚌', 'autobus'], ['🚲', 'rower'], ['🚂', 'pociąg'], ['🚜', 'traktor']] },
+  { pl: 'ubrania', it: [['👕', 'koszulka'], ['👗', 'sukienka'], ['🧣', 'szalik'], ['🧢', 'czapka'], ['🧥', 'kurtka']] },
+  { pl: 'instrumenty muzyczne', it: [['🎸', 'gitara'], ['🥁', 'bęben'], ['🎹', 'pianino'], ['🎺', 'trąbka'], ['🎷', 'saksofon']] },
+  { pl: 'przybory szkolne', it: [['✏️', 'ołówek'], ['📏', 'linijka'], ['🖍️', 'kredka'], ['📒', 'zeszyt'], ['🎒', 'plecak']] },
+];
+const COLORS = [['#E53935', 'czerwony'], ['#1E88E5', 'niebieski'], ['#FDD835', 'żółty'], ['#43A047', 'zielony']];
+const SHAPES = ['circle', 'square', 'triangle', 'diamond'];
+function shape(kind, col) {
+  const S = `fill="${col}" stroke="#333" stroke-width="3" stroke-linejoin="round"`;
+  const body = { circle: `<circle cx="50" cy="50" r="38" ${S}/>`, square: `<rect x="14" y="14" width="72" height="72" rx="6" ${S}/>`,
+    triangle: `<polygon points="50,10 90,86 10,86" ${S}/>`, diamond: `<polygon points="50,6 92,50 50,94 8,50" ${S}/>` }[kind];
+  return `<svg class="shape" viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
+}
+function genOdd(i) {
+  const mode = i % 3;
+  if (mode === 0) {
+    const [A, B] = sample(CATS, 2), items = sample(A.it, 3), odd = pick(B.it);
+    return { key: 'o0' + odd[0] + items.map(x => x[0]).join(''), t: 'Co nie pasuje?', p: 'Trzy rzeczy są do siebie podobne. Jedna nie pasuje.',
+      say: 'Co nie pasuje do reszty?', prompt: '', cls: 'pics', after: `${cap(odd[1])} nie pasuje, bo reszta to ${A.pl}.`,
+      review: `${odd[0]} – reszta to ${A.pl}`,
+      options: shuffle([...items.map(x => ({ html: emo(x[0]), ok: false })), { html: emo(odd[0]), ok: true }]) };
+  }
+  if (mode === 1) {
+    const byColor = coin();
+    const [v, w] = sample(byColor ? COLORS.map(c => c[0]) : SHAPES, 2);
+    const other = shuffle(byColor ? SHAPES : COLORS.map(c => c[0]));      // all different, so only one attribute singles out an item
+    const items = other.map((o, k) => ({ main: k === 3 ? w : v, o, odd: k === 3 }));
+    return { key: 'o1' + byColor + v + w + other.join(''), t: 'Która figura nie pasuje?', p: 'Przyjrzyj się kolorom i kształtom.',
+      say: 'Która figura nie pasuje do reszty?', prompt: '', cls: 'pics',
+      after: byColor ? 'Tylko ta figura ma inny kolor.' : 'Tylko ta figura ma inny kształt.',
+      options: shuffle(items.map(x => ({ html: byColor ? shape(x.o, x.main) : shape(x.main, x.o), ok: x.odd }))) };
+  }
+  const even = coin();
+  let nums, odd, why;
+  if (coin()) {
+    const pool = Array.from({ length: 19 }, (_, k) => k + 2).filter(n => n % 10 !== 0);
+    nums = sample(pool.filter(n => (n % 2 === 0) === even), 3); odd = pick(pool.filter(n => (n % 2 === 0) !== even));
+    why = `Liczba ${odd} jest ${even ? 'nieparzysta' : 'parzysta'}, a reszta liczb jest ${even ? 'parzysta' : 'nieparzysta'}.`;
+  } else {
+    nums = sample([10, 20, 30, 40, 50, 60, 70, 80, 90], 3); odd = between(11, 89); while (odd % 10 === 0) odd = between(11, 89);
+    why = `Liczba ${odd} nie jest pełną dziesiątką, a reszta to pełne dziesiątki.`;
+  }
+  return { key: 'o2' + odd + nums.join(), t: 'Która liczba nie pasuje?', p: 'Znajdź regułę, którą mają trzy liczby.',
+    say: 'Która liczba nie pasuje do reszty?', prompt: '', cls: 'pics', after: why, review: why,
+    options: shuffle([...nums.map(n => ({ html: String(n), ok: false })), { html: String(odd), ok: true }]) };
+}
+
+/* ---------- 2. Wzory i pary ---------- */
+const ANALOGY = [
+  ['🐶', '🦴', '🐰', '🥕', 'Pies lubi kość, a królik lubi marchewkę.'],
+  ['☀️', '😎', '🌧️', '☂️', 'Na słońce zakładamy okulary, a na deszcz bierzemy parasol.'],
+  ['🐔', '🥚', '🐄', '🥛', 'Kura daje jajka, a krowa daje mleko.'],
+  ['🦶', '🧦', '✋', '🧤', 'Na stopę zakładamy skarpetkę, a na dłoń rękawiczkę.'],
+  ['🐟', '🌊', '🐪', '🏜️', 'Ryba żyje w wodzie, a wielbłąd na pustyni.'],
+  ['🌱', '🌳', '🐣', '🐔', 'Z małej roślinki wyrasta drzewo, a z kurczątka kura.'],
+  ['✏️', '📝', '🖌️', '🎨', 'Ołówkiem piszemy, a pędzlem malujemy.'],
+  ['🚗', '⛽', '📱', '🔋', 'Samochód tankujemy, a telefon ładujemy.'],
+  ['🐒', '🍌', '🐭', '🧀', 'Małpa lubi banany, a mysz lubi ser.'],
+  ['🌙', '🛏️', '☀️', '🏫', 'W nocy śpimy, a w dzień chodzimy do szkoły.'],
+];
+const ROT = [0, 90, 180, 270];
+const arr = deg => `<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(${deg} 12 12)"><path d="M4 12h14M12 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="#1E88E5" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
+function genPattern(i) {
+  const mode = i % 3;
+  if (mode === 0) {
+    const e = pick(['⭐', '🍎', '🔵', '🌸', '🐞']), a = between(1, 2), s = i < 6 ? 1 : pick([1, 2]), cnt = [0, 1, 2].map(k => a + k * s), ans = a + 3 * s;
+    return { key: 'w0' + e + a + s, t: 'Ile będzie w następnej grupie?', p: 'Zobacz, o ile rośnie każda grupa.', say: 'Ile będzie w następnej grupie?',
+      prompt: `<div class="groups">${cnt.map(n => `<div class="grp">${e.repeat(n)}</div>`).join('')}<div class="grp q">?</div></div>`, cls: 'three cols3',
+      after: `Każda grupa ma o ${s} więcej, więc następna ma ${ans}.`, options: numOpts(ans, 1, 12) };
+  }
+  if (mode === 1) {
+    const st = pick(ROT), turn = pick([90, -90]), seq = [0, 1, 2, 3].map(k => (st + k * turn + 720) % 360), ans = (st + 4 * turn + 720) % 360;
+    return { key: 'w1' + st + turn, t: 'Jak obróci się strzałka?', p: 'Strzałka obraca się zawsze tak samo.', say: 'W którą stronę będzie pokazywać następna strzałka?',
+      prompt: `<div class="arrows">${seq.map(arr).join('')}<div class="qm">?</div></div>`, cls: 'three cols3',
+      after: `Strzałka obraca się ${turn > 0 ? 'w prawo, jak wskazówki zegara' : 'w lewo, w przeciwną stronę niż wskazówki zegara'}.`,
+      options: shuffle([ans, ...sample(ROT.filter(r => r !== ans), 2)]).map(r => ({ html: arr(r), ok: r === ans })) };
+  }
+  const [a, b, c, d, why] = pick(ANALOGY), wrongs = sample(ANALOGY.map(x => x[3]).filter(x => x !== d && x !== b && x !== c), 2);
+  return { key: 'w2' + a, t: 'Co pasuje do pary?', p: 'Pomyśl, co łączy pierwszą parę.', say: 'Co pasuje do drugiej pary? Pomyśl, co łączy pierwszą parę.',
+    prompt: `<div class="analogy"><span>${a}</span><span class="to">➜</span><span>${b}</span><span>${c}</span><span class="to">➜</span><span class="qm">?</span></div>`,
+    cls: 'three cols3', after: why, review: `${a}➜${b}, ${c}➜${d}`, options: shuffle([d, ...wrongs]).map(x => ({ html: emo(x), ok: x === d })) };
+}
+
+/* ---------- 3. Zagadki ---------- */
+const ROBO_COL = [['czerwony', '#EF5350'], ['niebieski', '#42A5F5'], ['zielony', '#66BB6A'], ['żółty', '#FFEE58'], ['fioletowy', '#AB47BC']];
+const CMP = [['wyższy', 'najwyższy', 'najniższy'], ['szybszy', 'najszybszy', 'najwolniejszy'], ['cięższy', 'najcięższy', 'najlżejszy'], ['starszy', 'najstarszy', 'najmłodszy']];
+const ANIM = [['🐱', 'kot', 'kota'], ['🐶', 'pies', 'psa'], ['🐭', 'mysz', 'myszy'], ['🐰', 'królik', 'królika'], ['🐸', 'żaba', 'żaby'], ['🦔', 'jeż', 'jeża']];
+const LEGS = [['🐔', 'kura', 'kury', 'kur', 2], ['🦆', 'kaczka', 'kaczki', 'kaczek', 2], ['🐕', 'pies', 'psy', 'psów', 4], ['🐴', 'koń', 'konie', 'koni', 4], ['🐈', 'kot', 'koty', 'kotów', 4]];
+const form = (n, [, one, few, many]) => `${n} ${n === 1 ? one : n <= 4 ? few : many}`;
+function genRiddle(i) {
+  const mode = i % 3;
+  if (mode === 0) {
+    const ord = sample(ROBO_COL, 3), [cmp, top, low] = pick(CMP), askTop = coin(), ans = askTop ? ord[0] : ord[2];
+    const facts = shuffle([`${cap(ord[0][0])} robot jest ${cmp} niż ${ord[1][0]}.`, `${cap(ord[1][0])} robot jest ${cmp} niż ${ord[2][0]}.`]);
+    const q = `Który robot jest ${askTop ? top : low}?`;
+    return { key: 'z0' + ord.map(o => o[0]).join() + cmp + askTop, t: q, p: 'Przeczytaj uważnie obie wskazówki.', say: `${facts.join(' ')} ${q}`,
+      prompt: `<div class="riddle">${facts.join('<br>')}</div>`, cls: 'three cols3', after: `${cap(ans[0])} robot jest ${askTop ? top : low}.`,
+      review: `${facts.join(' ')} → ${ans[0]}`,
+      options: shuffle(ord).map(o => ({ html: `<div><span class="bot">${Robo.robot(o[1])}</span><span class="lbl">${o[0]}</span></div>`, ok: o === ans })), };
+  }
+  if (mode === 1) {
+    const ord = sample(ANIM, 3), f = ([x, y]) => coin() ? `${cap(x[1])} siedzi na lewo od ${y[2]}.` : `${cap(y[1])} siedzi na prawo od ${x[2]}.`;
+    const facts = shuffle([f([ord[0], ord[1]]), f([ord[1], ord[2]])]), ask = pick([0, 1, 2]);
+    const q = ['Kto siedzi najbardziej z lewej?', 'Kto siedzi w środku?', 'Kto siedzi najbardziej z prawej?'][ask];
+    return { key: 'z1' + ord.map(o => o[1]).join() + ask, t: q, p: 'Zwierzęta siedzą obok siebie w jednym rzędzie.', say: `${facts.join(' ')} ${q}`,
+      prompt: `<div class="riddle">${facts.join('<br>')}</div>`, cls: 'three cols3',
+      after: `Kolejność od lewej: ${ord.map(o => o[1]).join(', ')}.`, review: `od lewej: ${ord.map(o => o[0]).join(' ')}`,
+      options: shuffle(ord).map(o => ({ html: `<div>${emo(o[0])}<span class="lbl">${o[1]}</span></div>`, ok: o === ord[ask] })) };
+  }
+  const [A, B] = sample(LEGS.filter(l => l[4] === 2), 1).concat(sample(LEGS.filter(l => l[4] === 4), 1));
+  const a = between(1, 3), b = between(1, 3), ans = a * A[4] + b * B[4];
+  return { key: 'z2' + A[1] + a + B[1] + b, t: 'Ile razem mają nóg?', p: `${cap(A[1])} ma ${A[4]} nogi, ${B[1]} ma ${B[4]} nogi.`,
+    say: `Na podwórku: ${form(a, A)} i ${form(b, B)}. Ile razem mają nóg?`,
+    prompt: `<div class="riddle">Na podwórku: ${form(a, A)} i ${form(b, B)}.<div class="row">${A[0].repeat(a)} ${B[0].repeat(b)}</div></div>`,
+    cls: 'three cols3', after: `${a} razy ${A[4]} to ${a * A[4]}, ${b} razy ${B[4]} to ${b * B[4]}. Razem ${ans}.`, options: numOpts(ans, 2, 30) };
+}
+
+/* ---------- 4. Sudoku 4×4 ---------- */
+const SDK_SETS = [['🍎', '🍌', '🍇', '🍐'], ['🐱', '🐶', '🐰', '🐸'], ['🔴', '🔵', '🟡', '🟢'], ['⭐', '🌙', '☀️', '☁️']];
+const BOX = k => Math.floor(Math.floor(k / 4) / 2) * 2 + Math.floor((k % 4) / 2);
+function latin() {
+  const base = [[0, 1, 2, 3], [2, 3, 0, 1], [1, 0, 3, 2], [3, 2, 1, 0]], sym = shuffle([0, 1, 2, 3]);
+  const order = () => (coin() ? [0, 2] : [2, 0]).flatMap(b => coin() ? [b, b + 1] : [b + 1, b]);
+  const rows = order(), cols = order(), tr = coin();
+  const g = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) g.push(sym[tr ? base[cols[c]][rows[r]] : base[rows[r]][cols[c]]]);
+  return g;
+}
+const peers = k => [...Array(16).keys()].filter(j => j !== k && (Math.floor(j / 4) === Math.floor(k / 4) || j % 4 === k % 4 || BOX(j) === BOX(k)));
+function solutions(g, limit = 2) {
+  const k = g.indexOf(null);
+  if (k < 0) return 1;
+  let n = 0;
+  for (let v = 0; v < 4 && n < limit; v++) if (!peers(k).some(j => g[j] === v)) { g[k] = v; n += solutions(g, limit - n); g[k] = null; }
+  return n;
+}
+function puzzle(blanks) {
+  for (;;) {
+    const sol = latin(), g = [...sol];
+    let removed = 0;
+    for (const k of shuffle([...Array(16).keys()])) {
+      if (removed >= blanks) break;
+      const v = g[k]; g[k] = null;
+      if (solutions([...g]) === 1) removed++; else g[k] = v;
+    }
+    if (removed >= blanks) return { sol, g };
+  }
+}
+function genSudoku(i) {
+  const blanks = [4, 5, 6, 8][Math.min(i, 3)], set = pick(SDK_SETS), { sol, g } = puzzle(blanks);
+  return { kind: 'custom', key: 's' + g.join(), t: 'Sudoku z obrazkami', p: 'W każdym rzędzie, w każdej kolumnie i w każdym małym kwadracie 2×2 każdy obrazek jest tylko raz.',
+    say: 'Uzupełnij puste pola. Każdy obrazek może być tylko raz w rzędzie, w kolumnie i w małym kwadracie.',
+    after: 'Sudoku rozwiązane!', review: 'sudoku', mount: (el, api) => mountSudoku(el, api, set, sol, g) };
+}
+function mountSudoku(el, api, set, sol, g) {
+  const cur = [...g];
+  let sel = cur.indexOf(null), errs = 0;
+  el.innerHTML = `<div class="sdk">${cur.map((v, k) => `<button data-k="${k}" class="${v == null ? 'empty' : 'given'}${k % 4 === 1 ? ' c1' : ''}${Math.floor(k / 4) === 1 ? ' r1' : ''}"
+      aria-label="pole ${Math.floor(k / 4) + 1}, ${k % 4 + 1}">${v == null ? '' : set[v]}</button>`).join('')}</div>
+    <div class="palette">${set.map((s, v) => `<button data-v="${v}" aria-label="wstaw ${s}">${s}</button>`).join('')}</div>
+    <div class="help">Dotknij pustego pola, a potem obrazka na dole.</div>`;
+  const cells = el.querySelectorAll('.sdk button'), pal = el.querySelectorAll('.palette button');
+  const mark = () => { cells.forEach((c, k) => c.classList.toggle('sel', k === sel)); pal.forEach(p => p.classList.remove('hint')); errs = 0; };
+  mark();
+  el.addEventListener('click', e => {
+    const c = e.target.closest('[data-k]'), p = e.target.closest('[data-v]');
+    if (c && cur[+c.dataset.k] == null) { sel = +c.dataset.k; mark(); return; }
+    if (!p || sel < 0 || !api.live()) return;
+    const v = +p.dataset.v, cell = cells[sel];
+    if (sol[sel] === v) {
+      cur[sel] = v; cell.textContent = set[v]; cell.className = cell.className.replace(/\b(empty|sel|bad)\b/g, '') + ' done';
+      api.tone([700], .07);
+      const nxt = cur.findIndex((x, k) => x == null && k > sel), first = cur.indexOf(null);
+      sel = nxt >= 0 ? nxt : first; mark();
+      if (sel < 0) api.ok();
+    } else {
+      cell.classList.remove('bad'); void cell.offsetWidth; cell.classList.add('bad'); api.bad(); errs++;
+      if (errs >= 2 && api.hints) pal[sol[sel]].classList.add('hint');
+    }
+  });
+}
+
+/* ---------- 5. Labirynt Robo ---------- */
+const N = 5, CELL = 40, MOVES = { '→': [0, 1], '←': [0, -1], '↓': [1, 0], '↑': [-1, 0] }, DEG = { '→': 0, '↓': 90, '←': 180, '↑': 270 };
+const arrowIc = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(${DEG[d]} 12 12)"><path d="M4 12h14M12 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="#1E88E5" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
+const NAME = { '→': 'w prawo', '←': 'w lewo', '↓': 'w dół', '↑': 'w górę' };
+function bfs(start, rocks) {
+  const prev = { [start]: null }, q = [start];
+  while (q.length) {
+    const [r, c] = q.shift();
+    for (const d in MOVES) {
+      const n = [r + MOVES[d][0], c + MOVES[d][1]];
+      if (n[0] < 0 || n[0] >= N || n[1] < 0 || n[1] >= N || rocks.has(String(n)) || String(n) in prev) continue;
+      prev[n] = [[r, c], d]; q.push(n);
+    }
+  }
+  return prev;
+}
+function pathTo(prev, t) { const p = []; let k = String(t); while (prev[k]) { p.unshift(prev[k][1]); k = String(prev[k][0]); } return p; }
+function genMaze(i) {
+  const lv = Math.min(i, 4), nRocks = [3, 4, 5, 6, 7][lv], [dmin, dmax] = [[2, 4], [3, 5], [4, 6], [4, 7], [5, 8]][lv];
+  for (let t = 0; ; t++) {
+    const start = [rnd(N), rnd(N)], rocks = new Set();
+    while (rocks.size < nRocks) { const x = [rnd(N), rnd(N)]; if (String(x) !== String(start)) rocks.add(String(x)); }
+    const prev = bfs(start, rocks), cands = Object.keys(prev).map(k => k.split(',').map(Number)).filter(x => {
+      const d = pathTo(prev, x).length, manh = Math.abs(x[0] - start[0]) + Math.abs(x[1] - start[1]);
+      return d >= dmin && d <= dmax && (lv < 2 || t > 300 || d > manh);       // later boards make Robo walk around the rocks
+    });
+    if (!cands.length) continue;
+    const target = pick(cands);
+    return { kind: 'custom', key: 'm' + start + target + [...rocks].join(), t: 'Zaprogramuj Robo!', p: 'Ułóż strzałki, a potem naciśnij Start. Omijaj meteoryty ☄️.',
+      say: 'Ułóż program ze strzałek, żeby Robo doszedł do gwiazdki. Omijaj meteoryty.',
+      after: 'Robo doszedł do gwiazdki! Dobry program!', review: 'labirynt',
+      mount: (el, api) => mountMaze(el, api, start, target, rocks, pathTo(prev, target)) };
+  }
+}
+function boardSvg(pos, target, rocks, hint) {
+  let s = `<rect x="0" y="0" width="${N * CELL}" height="${N * CELL}" rx="8" fill="#E3F2FD" stroke="#90CAF9" stroke-width="2"/>`;
+  for (let k = 1; k < N; k++) s += `<line x1="${k * CELL}" y1="0" x2="${k * CELL}" y2="${N * CELL}" stroke="#90CAF9"/><line x1="0" y1="${k * CELL}" x2="${N * CELL}" y2="${k * CELL}" stroke="#90CAF9"/>`;
+  const at = ([r, c], txt, size = 28) => `<text x="${c * CELL + CELL / 2}" y="${r * CELL + CELL / 2 + size * .36}" text-anchor="middle" font-size="${size}">${txt}</text>`;
+  (hint || []).forEach(([r, c]) => { s += `<circle cx="${c * CELL + CELL / 2}" cy="${r * CELL + CELL / 2}" r="6" fill="#FFC107" opacity=".8"/>`; });
+  rocks.forEach(k => { s += at(k.split(',').map(Number), '☄️', 26); });
+  s += at(target, '⭐');
+  s += Robo.robot().replace(/<svg[^>]*>/, `<svg x="${pos[1] * CELL + 3}" y="${pos[0] * CELL + 3}" width="${CELL - 6}" height="${CELL - 6}" viewBox="0 0 100 100">`);
+  return `<svg viewBox="-2 -2 ${N * CELL + 4} ${N * CELL + 4}" role="img" aria-label="plansza z robotem, gwiazdką i meteorytami">${s}</svg>`;
+}
+function mountMaze(el, api, start, target, rocks, best) {
+  const MAX = 12, prog = [];
+  let running = false, errs = 0, pos = start;
+  el.innerHTML = `<div class="maze"></div><div class="prg"></div>
+    <div class="ctrl"><div class="pad">${Object.keys(MOVES).map(d => `<button data-d="${d}" class="${{ '→': 'right', '←': 'left', '↓': 'down', '↑': 'up' }[d]}" aria-label="${NAME[d]}">${arrowIc(d)}</button>`).join('')}</div>
+    <div class="runrow"><button class="btn green" data-x="go">▶ Start</button><button class="btn grey" data-x="del">⌫ Cofnij</button><button class="btn grey" data-x="clr">Wyczyść</button></div></div>`;
+  const mz = el.querySelector('.maze'), prg = el.querySelector('.prg');
+  const hintCells = () => { if (!(api.hints && errs >= 2)) return null; let p = start; return best.slice(0, -1).map(d => (p = [p[0] + MOVES[d][0], p[1] + MOVES[d][1]])); };
+  const draw = () => { mz.innerHTML = boardSvg(pos, target, rocks, hintCells()); };
+  const drawProg = (now = -1) => {
+    prg.innerHTML = prog.length ? prog.map((d, k) => arrowIc(d).replace('<svg', `<svg class="${k === now ? 'now' : ''}"`)).join('') : '<span class="empty">Tu pojawi się Twój program</span>';
+    el.querySelectorAll('button').forEach(b => { b.disabled = running || (b.dataset.d && prog.length >= MAX) || (b.dataset.x && !prog.length); });
+  };
+  draw(); drawProg();
+  const fail = msg => {
+    mz.classList.remove('bump'); void mz.offsetWidth; mz.classList.add('bump');
+    api.bad(); errs++;
+    setTimeout(() => { if (!api.live()) return; api.say(msg); pos = start; running = false; draw(); drawProg(); }, 900);
+  };
+  const go = () => {
+    if (running || !prog.length || !api.live()) return;
+    running = true; pos = start; drawProg(0);
+    let k = 0;
+    (function step() {
+      if (!el.isConnected) return;
+      if (k >= prog.length) {
+        if (String(pos) === String(target)) return api.ok();
+        return fail('Robo nie doszedł do gwiazdki. Popraw program.');
+      }
+      const n = [pos[0] + MOVES[prog[k]][0], pos[1] + MOVES[prog[k]][1]];
+      if (n[0] < 0 || n[0] >= N || n[1] < 0 || n[1] >= N) return fail('Ups! Robo wyszedłby poza planszę.');
+      if (rocks.has(String(n))) return fail('Bum! Na drodze był meteoryt.');
+      pos = n; draw(); drawProg(k); api.tone([520 + k * 25], .06); k++;
+      setTimeout(step, 420);
+    })();
+  };
+  const add = d => { if (running || prog.length >= MAX) return; prog.push(d); api.tone([600], .05); drawProg(); };
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || running) return;
+    if (b.dataset.d) add(b.dataset.d);
+    else if (b.dataset.x === 'del') { prog.pop(); drawProg(); }
+    else if (b.dataset.x === 'clr') { prog.length = 0; drawProg(); }
+    else if (b.dataset.x === 'go') go();
+  });
+  const KEYS = { ArrowRight: '→', ArrowLeft: '←', ArrowDown: '↓', ArrowUp: '↑' };
+  const onKey = e => {
+    if (!el.isConnected) return document.removeEventListener('keydown', onKey);
+    if (KEYS[e.key]) { e.preventDefault(); add(KEYS[e.key]); }
+    else if (e.key === 'Backspace' && !running) { e.preventDefault(); prog.pop(); drawProg(); }
+    else if (e.key === 'Enter') { e.preventDefault(); go(); }
+  };
+  document.addEventListener('keydown', onKey);
+}
+
+/* ---------- 6. Pary (memory) ---------- */
+const MEM_SAME = ['🍎', '🐶', '🚀', '⭐', '🌈', '🐸', '🎈', '🍦', '🦋', '⚽', '🌻', '🐢'];
+const MEM_PAIRS = [['🔑', '🔒'], ['🐝', '🍯'], ['🐶', '🦴'], ['🐰', '🥕'], ['🌧️', '☂️'], ['🦶', '🧦'], ['⚽', '🥅'], ['🐟', '🌊'], ['✏️', '📒'], ['🐒', '🍌']];
+const BACK = '<svg class="back" viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" cy="54" rx="47" ry="12" fill="none" stroke="#FFF59D" stroke-width="6" transform="rotate(-18 50 54)"/><circle cx="50" cy="50" r="30" fill="#FFB300" stroke="#333" stroke-width="3"/></svg>';
+function genMemory(i) {
+  const r = i % 3, pairs = r === 0 ? sample(MEM_SAME, 6).map(e => [e, e]) : r === 1 ? sample(MEM_SAME, 8).map(e => [e, e]) : sample(MEM_PAIRS, 6);
+  return { kind: 'custom', key: 'p' + i + pairs.flat().join(''), t: r === 2 ? 'Znajdź pary, które do siebie pasują' : 'Znajdź pary takich samych obrazków',
+    p: r === 2 ? 'Na przykład klucz pasuje do kłódki. Zapamiętuj, gdzie co leży!' : 'Odkrywaj po dwie karty. Zapamiętuj, gdzie co leży!',
+    say: r === 2 ? 'Znajdź pary, które do siebie pasują. Na przykład klucz i kłódka.' : 'Znajdź pary takich samych obrazków.',
+    after: 'Wszystkie pary znalezione! Masz świetną pamięć!', review: 'pary', mount: (el, api) => mountMemory(el, api, pairs) };
+}
+function mountMemory(el, api, pairs) {
+  const cards = shuffle(pairs.flatMap(([a, b], id) => [{ e: a, id }, { e: b, id }]));
+  let open = [], left = pairs.length, misses = 0, busy = false;
+  el.innerHTML = `<div class="mem">${cards.map((c, k) => `<button data-c="${k}" aria-label="karta ${k + 1}">${BACK}</button>`).join('')}</div>`;
+  const btn = k => el.querySelector(`[data-c="${k}"]`);
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-c]'); if (!b || busy || !api.live()) return;
+    const k = +b.dataset.c;
+    if (b.classList.contains('up') || b.classList.contains('got')) return;
+    b.classList.add('up'); b.innerHTML = cards[k].e; open.push(k); api.tone([600], .05);
+    if (open.length < 2) return;
+    const [x, y] = open; open = [];
+    if (cards[x].id === cards[y].id) {
+      [x, y].forEach(j => { btn(j).classList.remove('up'); btn(j).classList.add('got'); });
+      api.tone([523, 784], .09);
+      if (--left === 0) setTimeout(api.ok, 300);
+    } else {
+      busy = true; misses++;
+      if (misses === pairs.length + 2) api.miss();        // a few misses are part of the game; many cost a star
+      setTimeout(() => { [x, y].forEach(j => { const c = btn(j); if (c) { c.classList.remove('up'); c.innerHTML = BACK; } }); busy = false; }, 950);
+    }
+  });
+}
+
+Robo.start({
+  id: 'robo-log-2c', lang: 'pl-PL', rate: .95,
+  title: 'Robo myśli', sub: 'Gry logiczne · klasa 2c',
+  intro: '<b>Cześć! Jestem Robo i uwielbiam łamigłówki.</b> Znajdź, co nie pasuje, odgadnij wzory, rozwiąż sudoku, zaprogramuj mnie w labiryncie i poszukaj par. Na końcu zrób <b>Lot próbny</b>.',
+  back: '../',
+  levels: [
+    { id: 'odd', name: 'Co nie pasuje?', pl: 'obrazki, figury, liczby', col: '#EF5350', ring: '#FFF59D', gen: genOdd },
+    { id: 'pattern', name: 'Wzory i pary', pl: 'co dalej? co pasuje?', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
+    { id: 'riddle', name: 'Zagadki', pl: 'kto najwyższy? kto w środku?', col: '#26A69A', ring: '#FFCC80', gen: genRiddle },
+    { id: 'sudoku', name: 'Sudoku', pl: 'obrazki 4×4', col: '#42A5F5', ring: '#F48FB1', gen: genSudoku, n: 4 },
+    { id: 'maze', name: 'Labirynt', pl: 'zaprogramuj Robo strzałkami', col: '#FFB300', ring: '#90CAF9', gen: genMaze, n: 5 },
+    { id: 'memory', name: 'Pary', pl: 'gra w pamięć', col: '#66BB6A', ring: '#CE93D8', gen: genMemory, n: 3, noTest: true },
+  ],
+  test: { name: 'Lot próbny', pl: '12 zadań ze wszystkiego (bez gry w pary), bez podpowiedzi.', n: 12 },
+});
+</script>
+</body>
+</html>

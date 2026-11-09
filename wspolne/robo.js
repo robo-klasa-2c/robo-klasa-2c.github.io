@@ -3,7 +3,11 @@
    Question kinds:
      choice (default): { key, t, p, say, listen?, prompt, cls, options: [{ html, ok }], after, review? }
      spell:            { kind: 'spell', key, word, t, p, say, prompt, after }
-     multi:            { kind: 'multi', key, t, p, say, prompt, tiles: [{ html, ok }], after }   (tap every correct tile) */
+     multi:            { kind: 'multi', key, t, p, say, prompt, tiles: [{ html, ok }], after }   (tap every correct tile)
+     custom:           { kind: 'custom', key, t, p, say, after, mount(el, api) }   (own mini-game drawn into el;
+                       api: ok() solves it, bad() counts a mistake with sound, miss() counts a mistake silently,
+                       live() is false once the question is gone, hints = false in the test, tone(freqs), say(text))
+   A level with noTest: true is left out of the mixed test (e.g. long mini-games). */
 (function () {
   'use strict';
   const C = { red: '#E53935', blue: '#1E88E5', yellow: '#FDD835', green: '#43A047', orange: '#FB8C00', pink: '#F06292',
@@ -169,7 +173,7 @@
            <div class="best">${best.test != null ? `${T.record}: ${best.test}/${cfg.test.n}` : ''}</div></button>
          <div class="foot">${T.foot}<br><button data-act="reset">${T.reset}</button>${cfg.back ? `<br><a href="${cfg.back}">${T.back}</a>` : ''}</div>`;
   }
-  function mixedGen(i) { return cfg.levels[i % cfg.levels.length].gen(rnd(12)); }
+  function mixedGen(i) { const ls = cfg.levels.filter(l => !l.noTest); return ls[i % ls.length].gen(rnd(12)); }
   function startLevel(lv) {
     const n = lv.n || cfg.perLevel || 8, qs = [], used = new Set();
     for (let i = 0; i < n; i++) {
@@ -201,6 +205,8 @@
       state.multiLeft = q.tiles.filter(t => t.ok).length;
       body = `<div class="prompt">${q.prompt || ''}</div>
         <div class="tiles">${q.tiles.map((t, i) => `<button class="tile" data-mt="${i}">${t.html}</button>`).join('')}</div>`;
+    } else if (q.kind === 'custom') {
+      body = '<div class="custom"></div>';
     } else {
       const prompt = q.listen ? `<button class="speak" style="width:120px;height:120px;margin:0" data-act="say">${SPEAKER}</button>` : (q.prompt || '');
       body = `<div class="prompt">${prompt}</div>
@@ -211,6 +217,15 @@
           ${q.say ? `<button class="speak" data-act="say" title="${T.repeat}">${SPEAKER}</button>` : ''}</div>
           ${body}<div style="height:70px"></div>
           <div class="bubble" id="bubble"></div><div class="robo" id="robo">${robot()}</div></div>`;
+    if (q.kind === 'custom') {
+      const st = state, idx = st.idx, live = () => state === st && st.idx === idx && !st.lock;
+      q.mount(app.querySelector('.custom'), {
+        live, hints: !isTest(), tone, say,
+        ok: () => { if (live()) correct(q); },
+        bad: () => { if (live()) wrong(); },
+        miss: () => { if (live()) st.qMistakes++; },
+      });
+    }
     if (q.say) setTimeout(() => say(q.say), 250);
   }
   function bubble(text, bad) {
