@@ -98,7 +98,11 @@
     let at = 0;
     s.replace(EN_PART, (m, en, i) => { parts.push([s.slice(at, i), false], [en, true]); at = i + m.length; return m; });
     parts.push([s.slice(at), false]);
-    return parts.map(([t, en]) => [plain(t), en]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
+    return parts.map(([t, en]) => [en ? plain(t) : spokenMath(plain(t)), en]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
+  }
+  /* Voices skip "=" (so "4 − 1 = 3" sounded like "cztery minus jeden trzy"): say the signs as words. */
+  function spokenMath(t) {
+    return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(/\s+/g, ' ').trim();
   }
   const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let sayTimer = null;

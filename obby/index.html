@@ -181,7 +181,11 @@ function speechParts(text) {
   let at = 0;
   s.replace(re, (m, e, i) => { parts.push([s.slice(at, i), false], [e, true]); at = i + m.length; return m; });
   parts.push([s.slice(at), false]);
-  return parts.map(([t, e]) => [strip(t).replace(/\s+/g, ' ').trim(), e]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
+  return parts.map(([t, e]) => [e ? strip(t).replace(/\s+/g, ' ').trim() : spokenMath(strip(t)), e]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
+}
+/* Voices skip "=" (so "4 − 1 = 3" sounded like "cztery minus jeden trzy"): say the signs as words. */
+function spokenMath(t) {
+  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(/\s+/g, ' ').trim();
 }
 function say(text) {
   const parts = speechParts(text);
@@ -252,7 +256,7 @@ function genMath() {
   if (k === 0) { const a = between(5, 9), b = between(11 - a, 9); return numQ('Ile to jest?', a + b, { show: `${a} + ${b}`, say: `Ile to jest ${a} dodać ${b}?`, after: `${a} + ${b} = ${a + b}` }); }
   if (k === 1) { const a = between(11, 18), b = between(a - 9, 9); return numQ('Ile to jest?', a - b, { show: `${a} − ${b}`, say: `Ile to jest ${a} odjąć ${b}?`, after: `${a} − ${b} = ${a - b}` }); }
   if (k === 2) {
-    const n = between(21, 98), tens = coin(), q = `Ile ${tens ? 'dziesiątek' : 'jedności'} ma liczba ${n}?`;
+    const n = pick(Array.from({ length: 78 }, (_, i) => i + 21).filter(x => x % 10)), tens = coin(), q = `Ile ${tens ? 'dziesiątek' : 'jedności'} ma liczba ${n}?`;
     return numQ(q, tens ? Math.floor(n / 10) : n % 10, { show: String(n), after: `${n} = ${Math.floor(n / 10) * 10} + ${n % 10}` });
   }
   if (k === 3) {
