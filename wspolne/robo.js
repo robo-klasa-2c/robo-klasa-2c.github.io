@@ -18,7 +18,7 @@
   const sample = (a, k) => shuffle(a).slice(0, k);
   const coin = () => Math.random() < .5;
   const pt = (cx, cy, r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)].map(v => v.toFixed(1));
-  const plain = html => String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const plain = html => String(html || '').replace(/<\/?span[^>]*>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   /* ---------- pictures ---------- */
   function robot(fill = '#64B5F6') {
@@ -64,7 +64,7 @@
   const storeSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
   /* ---------- sound & speech ---------- */
-  let cfg = null, T = null, soundOn = true, voice = null, actx = null, lastUtt = null, audioUnlocked = false;
+  let cfg = null, T = null, soundOn = true, voice = null, enVoice = null, actx = null, lastUtt = null, audioUnlocked = false;
   /* The first matching voice is often a robotic one (iOS 17+ lists Eloquence voices like Eddy or Grandma first),
      so rank all voices of the language and take the most natural one. */
   const ROBOTIC = /eloquence|\b(eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|albert|fred|junior|kathy|ralph|zarvox|trinoids|whisper|bubbles|jester|organ|superstar|wobble|bells|boing|cellos|bahh)\b/i;
@@ -84,8 +84,21 @@
   function loadVoices() {
     if (!('speechSynthesis' in window) || !cfg) return;
     const want = cfg.lang.toLowerCase();
-    let top = -1; voice = null;
-    speechSynthesis.getVoices().forEach(v => { const s = voiceScore(v, want); if (s > top) { top = s; voice = v; } });
+    let top = -1, topEn = -1; voice = null; enVoice = null;
+    speechSynthesis.getVoices().forEach(v => {
+      const s = voiceScore(v, want); if (s > top) { top = s; voice = v; }
+      const e = voiceScore(v, 'en-gb'); if (e > topEn) { topEn = e; enVoice = v; }
+    });
+  }
+  /* Text may mark English words as <span lang="en">…</span>; those parts are read by an English voice,
+     the rest by the game's own voice (so "blue" is not read the Polish way). */
+  const EN_PART = /<span lang="en">([\s\S]*?)<\/span>/g;
+  function speechParts(text) {
+    const s = String(text || ''), parts = [];
+    let at = 0;
+    s.replace(EN_PART, (m, en, i) => { parts.push([s.slice(at, i), false], [en, true]); at = i + m.length; return m; });
+    parts.push([s.slice(at), false]);
+    return parts.map(([t, en]) => [plain(t), en]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
   }
   const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let sayTimer = null;
@@ -108,16 +121,23 @@
     })();
   }
   function say(text) {
-    text = plain(text);
-    if (!soundOn || !text || !('speechSynthesis' in window)) return;
+    const parts = speechParts(text);
+    if (!soundOn || !parts.length || !('speechSynthesis' in window)) return;
     if (!voice) loadVoices();
     clearTimeout(sayTimer); sayTimer = null;
     const busy = speechSynthesis.speaking || speechSynthesis.pending;
     if (busy) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = cfg.lang; if (voice) u.voice = voice; u.rate = cfg.rate || .9; u.pitch = 1.05;
+    const own = cfg.lang.toLowerCase().startsWith('en');
+    const utts = parts.map(([t, en]) => {
+      const u = new SpeechSynthesisUtterance(t), english = en && !own;
+      u.lang = english ? 'en-GB' : cfg.lang;
+      const v = english ? enVoice : voice; if (v) u.voice = v;
+      u.rate = (cfg.rate || .9) * (english ? .95 : 1); u.pitch = 1.05;
+      return u;
+    });
+    const u = utts[0];
     lastUtt = u;
-    const go = () => { sayTimer = null; if (!soundOn || lastUtt !== u) return; speechSynthesis.speak(u); if (speechSynthesis.paused) speechSynthesis.resume(); };
+    const go = () => { sayTimer = null; if (!soundOn || lastUtt !== u) return; utts.forEach(x => speechSynthesis.speak(x)); if (speechSynthesis.paused) speechSynthesis.resume(); };
     // Android Chrome often drops an utterance spoken right after cancel() - give it a moment there
     if (busy && !IS_IOS) sayTimer = setTimeout(go, 150); else go();
   }
@@ -372,5 +392,5 @@
     showHome();
   }
 
-  window.Robo = { start, robot, C, rnd, pick, shuffle, sample, coin, pt, plain, _debug: () => ({ state, startLevel, showQuestion, showResult, next }) };
+  window.Robo = { start, robot, C, rnd, pick, shuffle, sample, coin, pt, plain, _speechParts: speechParts, _debug: () => ({ state, startLevel, showQuestion, showResult, next }) };
 })();

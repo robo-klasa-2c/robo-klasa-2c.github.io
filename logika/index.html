@@ -94,11 +94,12 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=e84356e0"></script>
+<script src="../wspolne/robo.js?v=3a9892e2"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const between = (a, b) => a + rnd(b - a + 1);
 const cap = s => s[0].toUpperCase() + s.slice(1);
+const en = w => `<span lang="en">${w}</span>`;      // English words: read by an English voice
 const emo = e => `<span class="emo">${e}</span>`;
 function numOpts(ans, lo = 0, hi = 40) {
   const cand = [...new Set([ans + 1, ans - 1, ans + 2, ans - 2, ans + 4])].filter(x => x !== ans && x >= lo && x <= hi);
@@ -148,7 +149,7 @@ function genOdd(i) {
     const items = other.map((o, k) => ({ main: k === 3 ? w : v, o, odd: k === 3 }));
     return { key: 'o2' + byColor + v + w + other.join(''), t: 'Która figura nie pasuje?', p: 'Przyjrzyj się kolorom i kształtom.',
       say: 'Która figura nie pasuje do reszty?', prompt: '', cls: 'pics',
-      after: byColor ? `Tylko ta figura jest ${w[1]}, po angielsku ${w[2]}.` : 'Tylko ta figura ma inny kształt.',
+      after: byColor ? `Tylko ta figura jest ${w[1]}, po angielsku ${en(w[2])}.` : 'Tylko ta figura ma inny kształt.',
       options: shuffle(items.map(x => ({ html: byColor ? shape(x.o, x.main[0]) : shape(x.main, x.o[0]), ok: x.odd }))) };
   }
   const sub = rnd(4);
@@ -173,9 +174,9 @@ function genOdd(i) {
 
 /* ---------- 2. Wzory i pary (liczby, zegar, dni tygodnia, słówka) ---------- */
 const ANALOGY = [
-  ['one', '1', 'five', '5', 'One to 1, a five to 5.'],
-  ['red', 'czerwony', 'blue', 'niebieski', 'Red to czerwony, a blue to niebieski.'],
-  ['ball', '⚽', 'teddy bear', '🧸', 'Ball to piłka, a teddy bear to miś.'],
+  ['one', '1', 'five', '5', `${en('One')} to 1, a ${en('five')} to 5.`],
+  ['red', 'czerwony', 'blue', 'niebieski', `${en('Red')} to czerwony, a ${en('blue')} to niebieski.`],
+  ['ball', '⚽', 'teddy bear', '🧸', `${en('Ball')} to piłka, a ${en('teddy bear')} to miś.`],
   ['🐣', '🦢', '🐥', '🐔', 'Z brzydkiego kaczątka wyrósł łabędź, a z kurczątka wyrasta kura.'],
   ['termometr', 'temperatura', 'wiatromierz', 'prędkość wiatru', 'Termometr mierzy temperaturę, a wiatromierz prędkość wiatru.'],
   ['aktor', 'scena', 'widz', 'widownia', 'Aktor gra na scenie, a widz siedzi na widowni.'],
@@ -375,8 +376,8 @@ function genMaze(i) {
 }
 const GOALS = [
   ['⭐', 'do gwiazdki', 'Robo doszedł do gwiazdki!'], ['🎟️', 'po bilet do teatru', 'Robo ma bilet do teatru!'],
-  ['🧸', 'do misia – teddy bear', 'Robo znalazł misia – teddy bear!'], ['🦢', 'do łabędzia', 'Robo doszedł do łabędzia z baśni!'],
-  ['🌡️', 'do termometru', 'Robo sprawdzi temperaturę!'], ['⚽', 'do piłki – ball', 'Robo ma piłkę – ball!'],
+  ['🧸', `do misia – ${en('teddy bear')}`, `Robo znalazł misia – ${en('teddy bear')}!`], ['🦢', 'do łabędzia', 'Robo doszedł do łabędzia z baśni!'],
+  ['🌡️', 'do termometru', 'Robo sprawdzi temperaturę!'], ['⚽', `do piłki – ${en('ball')}`, `Robo ma piłkę – ${en('ball')}!`],
 ];
 function boardSvg(pos, target, rocks, hint, goal = '⭐') {
   /* Blocky obstacle course: square platforms over glowing lava (lava cells simply have no platform). */

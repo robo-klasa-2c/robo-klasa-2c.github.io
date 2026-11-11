@@ -51,11 +51,18 @@
   .toast.hide { opacity: 0; }
 
   .ctrl { display: none; justify-content: space-between; align-items: center; margin-top: 12px; gap: 12px; user-select: none; -webkit-user-select: none; }
-  .ctrl .lr { display: flex; gap: 12px; }
+  /* phone controls like in blocky obby games: a thumb joystick on the left, a round jump button on the right */
+  .stickzone { position: relative; flex: 1; max-width: 280px; height: 124px; border-radius: 62px; background: rgba(255,255,255,.07); touch-action: none; }
+  .stick { position: absolute; left: 72px; top: 62px; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; pointer-events: none;
+           background: rgba(255,255,255,.14); border: 3px solid rgba(255,255,255,.45); }
+  .stick .knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: rgba(255,255,255,.88);
+                 box-shadow: 0 3px 8px rgba(0,0,0,.35); }
+  .stick.float { display: none; z-index: 5; } .stick.float.on { display: block; }
+  .sz-hint { position: absolute; right: 16px; bottom: 10px; font-size: 12px; color: rgba(255,255,255,.6); pointer-events: none; }
   .ctrl button { width: 84px; height: 84px; border-radius: 24px; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 40px; font-weight: 700;
                  touch-action: none; box-shadow: 0 5px 0 rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; }
   .ctrl button.on { background: rgba(255,255,255,.4); transform: translateY(2px); }
-  .ctrl button.jump { width: 110px; background: #43A047; }
+  .ctrl button.jump { width: 108px; height: 108px; border-radius: 50%; font-size: 46px; background: #43A047; border: 4px solid rgba(255,255,255,.55); }
   .ctrl button.jump.on { background: #66BB6A; }
   .keys { color: rgba(255,255,255,.75); font-size: 14px; margin-top: 10px; text-align: center; }
   @media (pointer: coarse), (max-width: 760px) { .ctrl { display: flex; } .keys { display: none; } .ov { position: fixed; z-index: 50; background: rgba(13,27,62,.8); } }
@@ -72,7 +79,7 @@
   .chip small { font-weight: 400; color: var(--muted); }
   .chip .price { background: #FFC107; border-radius: 10px; padding: 0 6px; font-size: 13px; }
   @media (max-width: 640px) { .shop { grid-template-columns: 1fr; } .shop .left { position: static; } .hello .act { margin-left: 0; } .hello { flex-wrap: wrap; } }
-  @media (max-width: 560px) { .ctrl button { width: 76px; height: 76px; } .ctrl button.jump { width: 104px; } .hud { gap: 6px; } .hud .pill { padding: 5px 8px; font-size: 14px; } #hudDeaths { display: none; } .hud .nm { font-size: 17px; flex-basis: 100%; order: -1; } }
+  @media (max-width: 560px) { .ctrl button.jump { width: 100px; height: 100px; } .hud { gap: 6px; } .hud .pill { padding: 5px 8px; font-size: 14px; } #hudDeaths { display: none; } .hud .nm { font-size: 17px; flex-basis: 100%; order: -1; } }
 </style>
 </head>
 <body>
@@ -93,10 +100,11 @@
     <div class="stage" id="stage">
       <canvas id="cv"></canvas>
       <div class="toast hide" id="toast"></div>
+      <div class="stick float" id="stick2"><div class="knob"></div></div>
       <div class="ov" id="ov" hidden></div>
     </div>
     <div class="ctrl" id="ctrl">
-      <div class="lr"><button data-k="left" aria-label="w lewo">◀</button><button data-k="right" aria-label="w prawo">▶</button></div>
+      <div class="stickzone" id="stickzone" aria-label="joystick: przesuń kciukiem w lewo albo w prawo"><div class="stick" id="stick"><div class="knob"></div></div><span class="sz-hint">◀ przesuń kciukiem ▶</span></div>
       <button class="jump" data-k="jump" aria-label="skok">⤒</button>
     </div>
     <div class="keys">Sterowanie: ← → (albo A, D) – chodzenie · spacja, ↑ albo W – skok · P – pauza</div>
@@ -147,27 +155,56 @@ const SFX = {
   bad: () => tone([196, 165], .14, 'triangle', .08), gem: () => tone([1047, 1319, 1568, 2093], .07, 'triangle', .07), click: () => tone([700], .03, 'square', .03),
 };
 const ROBOTIC = /eloquence|\b(eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|albert|fred|junior|kathy|ralph|zarvox|trinoids|whisper|bubbles|jester|organ|superstar|wobble|bells|boing|cellos|bahh)\b/i;
+let enVoice = null;
+function voiceScore(v, want) {
+  const lang = (v.lang || '').toLowerCase().replace('_', '-'), id = `${v.name} ${v.voiceURI}`;
+  if (!lang.startsWith(want.slice(0, 2))) return -1;
+  let s = lang === want ? 100 : 50;
+  if (/natural|neural/i.test(id)) s += 40; if (/premium/i.test(id)) s += 35; if (/enhanced/i.test(id)) s += 30; if (/google/i.test(id)) s += 25;
+  if (ROBOTIC.test(id)) s -= 80;
+  return s;
+}
 function loadVoice() {
   if (!('speechSynthesis' in window)) return;
-  let top = -1;
+  let top = -1, topEn = -1;
   speechSynthesis.getVoices().forEach(v => {
-    const lang = (v.lang || '').toLowerCase().replace('_', '-'), id = `${v.name} ${v.voiceURI}`;
-    if (!lang.startsWith('pl')) return;
-    let s = lang === 'pl-pl' ? 100 : 50;
-    if (/natural|neural/i.test(id)) s += 40; if (/premium/i.test(id)) s += 35; if (/enhanced/i.test(id)) s += 30; if (/google/i.test(id)) s += 25;
-    if (ROBOTIC.test(id)) s -= 80;
-    if (s > top) { top = s; voice = v; }
+    const s = voiceScore(v, 'pl-pl'); if (s > top) { top = s; voice = v; }
+    const e = voiceScore(v, 'en-gb'); if (e > topEn) { topEn = e; enVoice = v; }
   });
 }
 if ('speechSynthesis' in window) { loadVoice(); speechSynthesis.onvoiceschanged = loadVoice; }
+/* English words are marked <span lang="en">…</span> and read by an English voice; the rest by the Polish one. */
+const en = w => `<span lang="en">${w}</span>`;
+const strip = s => String(s || '').replace(/<[^>]+>/g, '');
+function speechParts(text) {
+  const s = String(text || ''), parts = [], re = /<span lang="en">([\s\S]*?)<\/span>/g;
+  let at = 0;
+  s.replace(re, (m, e, i) => { parts.push([s.slice(at, i), false], [e, true]); at = i + m.length; return m; });
+  parts.push([s.slice(at), false]);
+  return parts.map(([t, e]) => [strip(t).replace(/\s+/g, ' ').trim(), e]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
+}
 function say(text) {
-  if (!save.sound || !text || !('speechSynthesis' in window)) return;
+  const parts = speechParts(text);
+  if (!save.sound || !parts.length || !('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text).replace(/<[^>]+>/g, ' '));
-    u.lang = 'pl-PL'; if (voice) u.voice = voice; u.rate = .95;
-    speechSynthesis.speak(u);
+    for (const [t, e] of parts) {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = e ? 'en-GB' : 'pl-PL'; const v = e ? enVoice : voice; if (v) u.voice = v; u.rate = e ? .9 : .95;
+      speechSynthesis.speak(u);
+    }
   } catch (e) {}
+}
+/* Run fn after at least minMs and after the reader has finished (+ a short pause); 12 s cap because some browsers never clear "speaking". */
+function afterSpeech(minMs, fn) {
+  const t0 = Date.now();
+  let quiet = 0;
+  (function check() {
+    const el = Date.now() - t0, busy = save.sound && 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
+    quiet = busy ? 0 : quiet + 150;
+    if (el >= minMs && (quiet >= 300 || el > 12000)) return fn();
+    setTimeout(check, 150);
+  })();
 }
 let unlocked = false;
 document.addEventListener('pointerdown', () => {
@@ -236,12 +273,12 @@ function genMath() {
 }
 function genEn() {
   const k = rnd(4);
-  if (k === 0) { const c = pick(Object.keys(COLORS)); return mk('Jaki to kolor po angielsku?', c, Object.keys(COLORS), { swatch: COLORS[c][0], after: `${COLORS[c][1]} – ${c}` }); }
-  if (k === 1) { const n = between(1, 15); return mk('Jak powiesz tę liczbę po angielsku?', NW[n], [NW[n - 1], NW[n + 1] || NW[n - 2], NW[(n + 5) % 16] || 'one'], { show: String(n), after: `${n} – ${NW[n]}` }); }
-  if (k === 2) { const [e, w] = pick(TOYS); return mk('Co to jest po angielsku?', w, TOYS.map(x => x[1]), { show: e, after: `It's a ${w}.` }); }
+  if (k === 0) { const c = pick(Object.keys(COLORS)); return mk('Jaki to kolor po angielsku?', c, Object.keys(COLORS), { swatch: COLORS[c][0], after: `${COLORS[c][1]} – ${en(c)}` }); }
+  if (k === 1) { const n = between(1, 15); return mk('Jak powiesz tę liczbę po angielsku?', NW[n], [NW[n - 1], NW[n + 1] || NW[n - 2], NW[(n + 5) % 16] || 'one'], { show: String(n), after: `${n} – ${en(NW[n])}` }); }
+  if (k === 2) { const [e, w] = pick(TOYS); return mk('Co to jest po angielsku?', w, TOYS.map(x => x[1]), { show: e, after: en(`It's a ${w}.`) }); }
   const [e, w] = pick(TOYS), yes = coin(), asked = yes ? w : pick(TOYS.filter(x => x[1] !== w))[1];
   const opts = ['Yes, it is.', "No, it isn't."];
-  return { q: `Is it a ${asked}?`, show: e, opts, ok: yes ? 0 : 1, say: 'Przeczytaj pytanie i odpowiedz po angielsku.', after: yes ? 'Yes, it is.' : `No, it isn't. It's a ${w}.` };
+  return { q: `Is it a ${asked}?`, show: e, opts, ok: yes ? 0 : 1, say: `Odpowiedz po angielsku. ${en(`Is it a ${asked}?`)}`, after: en(yes ? 'Yes, it is.' : `No, it isn't. It's a ${w}.`) };
 }
 function genPl() {
   const k = rnd(6);
@@ -465,7 +502,7 @@ function showMap() {
        }).join('')}</div>
        <div class="how"><b>Gwiazdki:</b> ★ dojdź do bramy · ★ zbierz co najmniej 8 na 10 monet · ★ znajdź ukryty 💎 diament.<br>
        <b>Monety</b> wydasz w Szafie na czapki i ślady. Za dobrą odpowiedź na fladze dostajesz 3 monety więcej.<br>
-       <b>Telefon:</b> przyciski ◀ ▶ i zielony skok. <b>Komputer:</b> strzałki albo A, D i spacja. Postęp zapisuje się tylko w tej przeglądarce.
+       <b>Telefon:</b> lewym kciukiem przesuwaj joystick, prawym skacz zielonym przyciskiem (albo dotknij prawej strony planszy). <b>Komputer:</b> strzałki albo A, D i spacja. Postęp zapisuje się tylko w tej przeglądarce.
        <br><button class="pill" data-a="reset" style="margin-top:8px">Wyzeruj postęp</button></div>`;
   preview($('#pv'), save.avatar);
 }
@@ -509,7 +546,7 @@ menu.addEventListener('click', e => {
   if (b.dataset.skin != null) { save.avatar.skin = +b.dataset.skin; store(); return showShop(); }
   for (const kind of ['body', 'pants', 'hair', 'visor']) {
     const v = b.dataset[kind]; if (!v) continue;
-    save.avatar[kind] = v; store(); say(`${v} to ${COLORS[v][1]}`); return showShop();
+    save.avatar[kind] = v; store(); say(`${en(v)} to ${COLORS[v][1]}`); return showShop();
   }
   for (const kind of ['hat', 'trail']) {
     if (b.dataset[kind] == null) continue;
@@ -544,7 +581,7 @@ function startLevel(i) {
   menu.hidden = true; play.hidden = false; ov.hidden = true;
   $('#hudName').textContent = `${i + 1}. ${L.name}`;
   resize(); hud(); startLoop();
-  toast(i === 0 ? 'Idź w prawo do bramy! Skacz spacją albo zielonym przyciskiem.' : `${L.name}: ${L.pl.split('·')[0].trim()}!`, 3500);
+  toast(i === 0 ? (matchMedia('(pointer: coarse)').matches ? 'Idź w prawo do bramy! Lewy kciuk: joystick, prawy: zielony skok.' : 'Idź w prawo do bramy! Strzałki – chodzenie, spacja – skok.') : `${L.name}: ${L.pl.split('·')[0].trim()}!`, 3500);
   say(L.name);
 }
 function spawn(cell) { return { x: cell.c * T + (T - PW) / 2, y: (cell.r + 1) * T - PH, vx: 0, vy: 0, on: false, coyote: 0, buf: 0, face: 1, walk: 0, plat: null, squash: 0 }; }
@@ -696,14 +733,15 @@ function openQuiz(kind, key, c, r) {
     const k = +b.dataset.o;
     if (k === Q.ok) {
       b.classList.add('ok'); ov.onclick = null; SFX.cp();
-      $('#qa').textContent = '✔ ' + (Q.after || 'Dobrze!'); say(`Dobrze! ${Q.after || ''}`);
-      setTimeout(() => {
-        if (!G || G.state !== 'quiz') return;
+      $('#qa').textContent = '✔ ' + strip(Q.after || 'Dobrze!'); say(`Dobrze! ${Q.after || ''}`);
+      const run = G;
+      afterSpeech(1300, () => {                 // let the reader finish the explanation before moving on
+        if (!G || G !== run || G.state !== 'quiz') return;
         if (kind === 'exit') return finish();
         G.active.add(key); G.cp = { c, r }; G.bonus += 3; save.coins += 3; store();
         G.stage = Math.max(G.stage, G.kIndex.get(key) || G.stage);
         sparkle(c * T + 16, r * T + 8, '#66BB6A', 20); closeOv(); toast(`🚩 Etap ${G.stage} zaliczony! +3 🪙`, 1800);
-      }, 1300);
+      });
     } else {
       b.classList.add('bad'); SFX.bad(); wrong++;
       $('#qa').textContent = 'Spróbuj jeszcze raz!';
@@ -920,14 +958,45 @@ addEventListener('keydown', e => {
   I[k] = true;
 });
 addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k) I[k] = false; });
-const padBtns = [...document.querySelectorAll('#ctrl [data-k]')], held = new Map();
-function syncPad() { for (const k of ['left', 'right', 'jump']) { const on = [...held.values()].includes(k); if (k === 'jump' && on && !I.jump) I.jumpPressed = true; I[k] = on; } padBtns.forEach(b => b.classList.toggle('on', I[b.dataset.k])); }
-function clearPad() { held.clear(); I.left = I.right = I.jump = false; padBtns.forEach(b => b.classList.remove('on')); }
-padBtns.forEach(b => {
-  b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} held.set(e.pointerId, b.dataset.k); syncPad(); });
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, e => { held.delete(e.pointerId); syncPad(); }));
-  b.addEventListener('contextmenu', e => e.preventDefault());
+/* Touch: joystick (left thumb) sets left/right, jump button or the right part of the game view jumps. Every finger is tracked by pointerId. */
+const jumpBtn = $('#ctrl .jump'), stage = $('#stage'), held = new Map(), stick = { id: null, ox: 0, oy: 0, el: null };
+function syncPad() { const on = [...held.values()].includes('jump'); if (on && !I.jump) I.jumpPressed = true; I.jump = on; jumpBtn.classList.toggle('on', on); }
+function stickDir(d) { I.left = d < 0; I.right = d > 0; }
+function stickEnd() {
+  if (!stick.el) return;
+  stick.el.querySelector('.knob').style.transform = '';
+  if (stick.el.classList.contains('float')) stick.el.classList.remove('on'); else { stick.el.style.left = ''; stick.el.style.top = ''; }
+  stick.id = null; stick.el = null; stickDir(0);
+}
+function clearPad() { held.clear(); stickEnd(); I.left = I.right = I.jump = false; jumpBtn.classList.remove('on'); }
+function attachStick(zone, el, accept) {
+  zone.addEventListener('pointerdown', e => {
+    if (stick.id != null || (accept && !accept(e))) return;
+    e.preventDefault(); try { zone.setPointerCapture(e.pointerId); } catch (_) {}
+    const r = zone.getBoundingClientRect();
+    Object.assign(stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, el });
+    el.style.left = (e.clientX - r.left) + 'px'; el.style.top = (e.clientY - r.top) + 'px'; el.classList.add('on');
+  });
+  zone.addEventListener('pointermove', e => {
+    if (e.pointerId !== stick.id) return;
+    const dx = Math.max(-46, Math.min(46, e.clientX - stick.ox)), dy = Math.max(-46, Math.min(46, e.clientY - stick.oy));
+    el.querySelector('.knob').style.transform = `translate(${dx}px, ${dy}px)`;
+    stickDir(dx < -12 ? -1 : dx > 12 ? 1 : 0);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => zone.addEventListener(ev, e => { if (e.pointerId === stick.id) stickEnd(); }));
+}
+attachStick($('#stickzone'), $('#stick'));
+const onView = e => e.target === cv && e.pointerType !== 'mouse' && G && G.state === 'play';
+attachStick(stage, $('#stick2'), e => onView(e) && e.clientX - stage.getBoundingClientRect().left < stage.clientWidth * .5);
+stage.addEventListener('pointerdown', e => {
+  if (!onView(e) || e.clientX - stage.getBoundingClientRect().left < stage.clientWidth * .5) return;
+  e.preventDefault(); try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+  held.set(e.pointerId, 'jump'); syncPad();
 });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => stage.addEventListener(ev, e => { if (held.delete(e.pointerId)) syncPad(); }));
+jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); try { jumpBtn.setPointerCapture(e.pointerId); } catch (_) {} held.set(e.pointerId, 'jump'); syncPad(); });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => jumpBtn.addEventListener(ev, e => { held.delete(e.pointerId); syncPad(); }));
+[jumpBtn, stage, $('#stickzone')].forEach(x => x.addEventListener('contextmenu', e => e.preventDefault()));
 play.addEventListener('click', e => {
   const b = e.target.closest('.hud button'); if (!b) return;
   const a = b.dataset.a;
