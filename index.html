@@ -82,6 +82,9 @@
   }
   @media (prefers-reduced-motion: reduce) { .btn:hover { transform: none; } }
 </style>
+<!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
+<script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
 </head>
 <body>
 <div class="wrap">
@@ -124,6 +127,8 @@
 
 <script>
 /* To add new material: append a unit to a subject (newest first) or flip a subject from soon:true to units:[...]. */
+// Count clicks on material links (PDF downloads, games) as anonymous events.
+document.addEventListener('click', e => { const a = e.target.closest('a.btn'); if (a && window.roboTrack) roboTrack('klik · ' + a.textContent.trim()); });
 const SUBJECTS = [
   { name: 'Angielski', en: 'English', col: '#F06292', ring: '#FFF59D', units: [
     { title: 'Unit 1 · My favourite things', isNew: true,

@@ -197,6 +197,9 @@
            <div class="best">${best.test != null ? `${T.record}: ${best.test}/${cfg.test.n}` : ''}</div></button>
          <div class="foot">${T.foot}<br><button data-act="reset">${T.reset}</button>${cfg.back ? `<br><a href="${cfg.back}">${T.back}</a>` : ''}</div>`;
   }
+  // Anonymous usage events (roboTrack is defined in the page head; missing it just skips counting).
+  const section = () => (location.pathname.match(/([^/]+)\/(?:index\.html)?$/) || [])[1] || 'strona';
+  function track(what) { try { if (window.roboTrack) window.roboTrack(`${section()} · ${what}`); } catch (e) { /* counting must never break the game */ } }
   function mixedGen(i) { const ls = cfg.levels.filter(l => !l.noTest); return ls[i % ls.length].gen(rnd(12)); }
   function startLevel(lv) {
     const n = lv.n || cfg.perLevel || 8, qs = [], used = new Set();
@@ -206,6 +209,7 @@
       used.add(q.key); qs.push(q);
     }
     state = { lv, qs, idx: 0, firstTry: 0, qMistakes: 0, lock: false, missed: [] };
+    track(`${plain(lv.name)} · start`);
     showQuestion();
   }
   function progressBar() {
@@ -318,6 +322,7 @@
     const stars = test ? (f >= n - 1 ? 3 : f >= Math.ceil(n * .7) ? 2 : 1) : (f === n ? 3 : f >= n - 2 ? 2 : 1);
     if (test) best.test = Math.max(best.test || 0, f); else best[state.lv.id] = Math.max(best[state.lv.id] || 0, stars);
     storeSet(cfg.id + '-best', best);
+    track(`${plain(state.lv.name)} · koniec ${stars}★ (${f}/${n})`);
     const msg = T.result[3 - stars];
     const review = state.missed.length ? `<div class="review"><b>${T.review}</b> ${[...new Set(state.missed)].map(m => `<i>${m}</i>`).join(' · ')}</div>` : '';
     app.innerHTML = topBar(`${state.lv.name} · ${state.lv.pl}`, true)

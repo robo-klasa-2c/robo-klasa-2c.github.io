@@ -81,6 +81,9 @@
   @media (max-width: 640px) { .shop { grid-template-columns: 1fr; } .shop .left { position: static; } .hello .act { margin-left: 0; } .hello { flex-wrap: wrap; } }
   @media (max-width: 560px) { .ctrl button.jump { width: 100px; height: 100px; } .hud { gap: 6px; } .hud .pill { padding: 5px 8px; font-size: 14px; } #hudDeaths { display: none; } .hud .nm { font-size: 17px; flex-basis: 100%; order: -1; } }
 </style>
+<!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
+<script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
 </head>
 <body>
 <div class="wrap">
@@ -557,7 +560,7 @@ menu.addEventListener('click', e => {
     const key = b.dataset.key, cost = +b.dataset.cost;
     if (!save.owned.includes(key) && cost > 0) {
       if (save.coins < cost) { SFX.bad(); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 300); say(`Potrzebujesz ${cost} monet.`); return; }
-      save.coins -= cost; save.owned.push(key); SFX.gem();
+      save.coins -= cost; save.owned.push(key); SFX.gem(); track(`szafa · kupione ${key}`);
     }
     save.avatar[kind] = b.dataset[kind]; store(); return showShop();
   }
@@ -569,6 +572,7 @@ let G = null, raf = 0, last = 0, acc = 0, scale = 1, dpr = 1;
 const I = { left: false, right: false, jump: false, jumpPressed: false };
 const STARS = Array.from({ length: 70 }, () => [Math.random(), Math.random(), Math.random() * 1.6 + .4]);
 
+function track(what) { try { if (window.roboTrack) window.roboTrack(`obby · ${what}`); } catch (e) { /* never break the game */ } }
 function startLevel(i) {
   const L = LEVELS[i], grid = L.rows.map(r => [...r]);
   let start = null, coinsTotal = 0;
@@ -584,6 +588,7 @@ function startLevel(i) {
   G.kIndex = new Map(ks.map(([c, r], k) => [r * 1000 + c, k + 2])); G.stage = 1; G.stages = ks.length + 2;   // stage 1 = start, last = gate
   menu.hidden = true; play.hidden = false; ov.hidden = true;
   $('#hudName').textContent = `${i + 1}. ${L.name}`;
+  track(`${L.name} · start`);
   resize(); hud(); startLoop();
   toast(i === 0 ? (matchMedia('(pointer: coarse)').matches ? 'Idź w prawo do bramy! Lewy kciuk: joystick, prawy: zielony skok.' : 'Idź w prawo do bramy! Strzałki – chodzenie, spacja – skok.') : `${L.name}: ${L.pl.split('·')[0].trim()}!`, 3500);
   say(L.name);
@@ -744,6 +749,7 @@ function openQuiz(kind, key, c, r) {
         if (kind === 'exit') return finish();
         G.active.add(key); G.cp = { c, r }; G.bonus += 3; save.coins += 3; store();
         G.stage = Math.max(G.stage, G.kIndex.get(key) || G.stage);
+        track(`${G.L.name} · flaga ${G.stage}${wrong ? ' (po pomyłce)' : ''}`);
         sparkle(c * T + 16, r * T + 8, '#66BB6A', 20); closeOv(); toast(`🚩 Etap ${G.stage} zaliczony! +3 🪙`, 1800);
       });
     } else {
@@ -761,6 +767,7 @@ function finish() {
   save.stars[L.id] = Math.max(save.stars[L.id] || 0, stars);
   if (newBest) save.best[L.id] = Math.round(G.time * 10) / 10;
   store();
+  track(`${L.name} · meta ${stars}★`);
   for (let k = 0; k < 60; k++) G.parts.push({ x: G.p.x + PW / 2, y: G.p.y, vx: (Math.random() - .5) * 600, vy: -200 - Math.random() * 500, life: 1.6, max: 1.6, col: `hsl(${rnd(360)},90%,60%)`, s: 5, g: .8 });
   const next = G.i + 1 < LEVELS.length;
   ov.hidden = false;

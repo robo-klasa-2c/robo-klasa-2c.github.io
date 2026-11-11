@@ -91,10 +91,13 @@
     .palette button { width: 62px; height: 62px; font-size: 34px; }
   }
 </style>
+<!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
+<script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=b7bf6183"></script>
+<script src="../wspolne/robo.js?v=5233cfd8"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const between = (a, b) => a + rnd(b - a + 1);

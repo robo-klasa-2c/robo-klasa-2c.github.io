@@ -187,6 +187,9 @@
   .confetti { position: fixed; top: -20px; width: 12px; height: 16px; border-radius: 3px; z-index: 50; pointer-events: none; animation: fall linear forwards; }
   @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
 </style>
+<!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
+<script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
 </head>
 <body>
 <div class="wrap" id="app"></div>
@@ -689,6 +692,7 @@ function showHome() {
          <button data-act="reset">Wyzeruj postęp</button><br><a href="../../">← Wszystkie pomoce klasy 2c</a></div>`;
 }
 let state = null;
+function track(what) { try { if (window.roboTrack) window.roboTrack(`angielski unit1 · ${what}`); } catch (e) { /* never break the game */ } }
 function startLevel(lv) {
   const n = lv.n || PER_LEVEL, qs = [], used = new Set();
   for (let i = 0; i < n; i++) {
@@ -697,6 +701,7 @@ function startLevel(lv) {
     used.add(q.key); qs.push(q);
   }
   state = { lv, qs, idx: 0, firstTry: 0, mistakes: 0, qMistakes: 0, lock: false, missed: [] };
+  track(`${lv.name} · start`);
   showQuestion();
 }
 function progressBar() {
@@ -789,6 +794,7 @@ function showResult() {
   const stars = isTest ? (f >= n - 1 ? 3 : f >= Math.ceil(n * .7) ? 2 : 1) : (f === n ? 3 : f >= n - 2 ? 2 : 1);
   if (isTest) best.test = Math.max(best.test || 0, f); else best[state.lv.id] = Math.max(best[state.lv.id] || 0, stars);
   saveBest();
+  track(`${state.lv.name} · koniec ${stars}★ (${f}/${n})`);
   const msg = stars === 3 ? 'Fantastic! You are a star!' : stars === 2 ? 'Well done!' : 'Good try! Play again!';
   const pl = stars === 3 ? 'Wspaniale – bez pomyłek!' : stars === 2 ? 'Bardzo dobrze! Jeszcze raz po 3 gwiazdki?' : 'Dobra robota! Zagraj jeszcze raz, będzie lepiej!';
   const review = state.missed.length
