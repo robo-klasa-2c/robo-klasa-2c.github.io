@@ -84,6 +84,8 @@
 <!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
 <script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
+<!-- roboPlayer(section): once per device 'nowy gracz' on the first game start, then 'gracz wraca' at most once a day (only a date is stored). -->
+<script>window.roboPlayer = function (s) { try { var k = 'robo-gracz-' + s, d = new Date().toDateString(), last = localStorage.getItem(k); if (last === d) return; localStorage.setItem(k, d); roboTrack(s + ' · ' + (last ? 'gracz wraca' : 'nowy gracz')); } catch (e) {} };</script>
 </head>
 <body>
 <div class="wrap">
@@ -589,6 +591,7 @@ function startLevel(i) {
   menu.hidden = true; play.hidden = false; ov.hidden = true;
   $('#hudName').textContent = `${i + 1}. ${L.name}`;
   track(`${L.name} · start`);
+  if (window.roboPlayer) roboPlayer('obby');
   resize(); hud(); startLoop();
   toast(i === 0 ? (matchMedia('(pointer: coarse)').matches ? 'Idź w prawo do bramy! Lewy kciuk: joystick, prawy: zielony skok.' : 'Idź w prawo do bramy! Strzałki – chodzenie, spacja – skok.') : `${L.name}: ${L.pl.split('·')[0].trim()}!`, 3500);
   say(L.name);

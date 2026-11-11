@@ -9,7 +9,7 @@ Strona: https://robo-klasa-2c.github.io/
 - `obby/` – gra „Robo Obby”: platformówka tor przeszkód (canvas, bez bibliotek). 5 planet budowanych w `level1()`…`level5()` (wysokość 1 = dolny rząd), pytania z lekcji na flagach etapów (`genMath`, `genEn`, `genPl`), szafa z wyglądem postaci, zapis w `localStorage`.
 - `wspolne/` – wspólny silnik gier (`robo.js`) i wygląd (`robo.css`) dla gier z matematyki, polskiego, informatyki i logiki. Pytania typu `custom` wstawiają własną mini-grę (sudoku, labirynt, memory).
 
-Statystyki (tylko dla właściciela, po zalogowaniu): https://robo-klasa-2c.goatcounter.com – anonimowy licznik bez ciasteczek. Każda strona ma w `<head>` skrypt GoatCounter i funkcję `roboTrack(nazwa)`; gry zapisują zdarzenia (start/koniec poziomu z gwiazdkami, flagi i meta w Robo Obby, zakupy w szafie, kliknięcia w materiały na stronie głównej). Nowa strona: skopiuj te 3 linie z `<head>` innej strony.
+Statystyki (tylko dla właściciela, po zalogowaniu): https://robo-klasa-2c.goatcounter.com – anonimowy licznik bez ciasteczek. Każda strona ma w `<head>` skrypt GoatCounter i funkcję `roboTrack(nazwa)`; gry zapisują zdarzenia (start/koniec poziomu z gwiazdkami, flagi i meta w Robo Obby, zakupy w szafie, kliknięcia w materiały na stronie głównej). `roboPlayer(sekcja)` przy starcie gry wysyła raz na urządzenie „nowy gracz”, potem najwyżej raz dziennie „gracz wraca” (w przeglądarce zapisuje się tylko data). Nowa strona: skopiuj te 5 linii z `<head>` innej strony.
 
 Nowy materiał: dodaj folder (np. `matematyka/dodawanie/`) i wpis w `SUBJECTS`.
 Bez danych osobowych dzieci i nauczycieli; strony mają `noindex`.

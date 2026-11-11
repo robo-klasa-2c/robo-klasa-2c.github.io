@@ -94,10 +94,12 @@
 <!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
 <script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
+<!-- roboPlayer(section): once per device 'nowy gracz' on the first game start, then 'gracz wraca' at most once a day (only a date is stored). -->
+<script>window.roboPlayer = function (s) { try { var k = 'robo-gracz-' + s, d = new Date().toDateString(), last = localStorage.getItem(k); if (last === d) return; localStorage.setItem(k, d); roboTrack(s + ' · ' + (last ? 'gracz wraca' : 'nowy gracz')); } catch (e) {} };</script>
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=5233cfd8"></script>
+<script src="../wspolne/robo.js?v=27cd1a81"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const between = (a, b) => a + rnd(b - a + 1);

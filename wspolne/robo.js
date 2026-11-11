@@ -210,6 +210,7 @@
     }
     state = { lv, qs, idx: 0, firstTry: 0, qMistakes: 0, lock: false, missed: [] };
     track(`${plain(lv.name)} · start`);
+    try { if (window.roboPlayer) window.roboPlayer(section()); } catch (e) { /* ignore */ }
     showQuestion();
   }
   function progressBar() {
