@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Robo 3D – klasa 2c</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../wspolne/robo.css?v=4d2badfa">
+<style>
+  /* Robo 3D: a blocky 3D obstacle course (three.js); menus, HUD and quizzes are plain DOM on top of the canvas. */
+  .wrap { max-width: 1040px; }
+  .coinpill { background: #FFC107; color: #3E2723; }
+  .planet[disabled] { opacity: .55; cursor: default; }
+  .planet[disabled]:hover { transform: none; }
+  .planet .lock { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .how { background: rgba(255,255,255,.1); color: #fff; border-radius: 20px; padding: 12px 18px; margin-top: 16px; font-size: 15px; line-height: 1.55; }
+  .how b { color: #FFE082; }
+  .how a { color: #FFE082; }
+  .nogl { background: #FFF3E0; border-radius: 18px; padding: 12px 16px; margin-top: 14px; font-size: 16px; }
+
+  /* the game fills the whole screen, like a real 3D game */
+  #play { position: fixed; inset: 0; z-index: 20; background: linear-gradient(#1a237e, #5c6bc0 60%, #9fa8da); touch-action: none;
+          user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; }
+  #play[hidden] { display: none; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hud { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: #fff; z-index: 3;
+         padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); pointer-events: none; }
+  .hud > * { pointer-events: auto; }
+  .hud .nm { font-family: var(--display); font-size: clamp(16px, 2.6vw, 22px); font-weight: 600; margin-right: auto; text-shadow: 0 2px 4px rgba(0,0,0,.5); }
+  .hud .pill { background: rgba(13,27,62,.6); color: #fff; }
+  .hud .coinpill { background: #FFC107; color: #3E2723; }
+  .toast { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); background: rgba(38,50,56,.9); color: #fff; border-radius: 14px; z-index: 4;
+           padding: 8px 14px; font-weight: 700; font-size: 16px; pointer-events: none; transition: opacity .4s; text-align: center; max-width: 90%; }
+  .toast.hide { opacity: 0; }
+  .fade { position: absolute; inset: 0; background: #0d1b3e; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 2; }
+  .fade.on { opacity: .85; }
+
+  /* phone controls like in 3D block games: joystick where the left thumb lands, drag right side to turn the camera, round jump button */
+  .stick { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none; z-index: 3; display: none;
+           background: rgba(255,255,255,.12); border: 3px solid rgba(255,255,255,.5); }
+  .stick.on { display: block; }
+  .stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px; border-radius: 50%; background: rgba(255,255,255,.9);
+                 box-shadow: 0 3px 8px rgba(0,0,0,.35); }
+  .jump { position: absolute; right: max(22px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); width: 104px; height: 104px;
+          border-radius: 50%; border: 4px solid rgba(255,255,255,.6); background: rgba(67,160,71,.85); color: #fff; font-size: 46px; z-index: 3;
+          display: none; align-items: center; justify-content: center; touch-action: none; box-shadow: 0 5px 0 rgba(0,0,0,.25); }
+  .jump.on { background: #66BB6A; transform: translateY(2px); }
+  .tip { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); color: rgba(255,255,255,.85); z-index: 3;
+         font-size: 14px; text-align: center; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.6); width: 92%; transition: opacity .6s; }
+  .tip.hide { opacity: 0; }
+  .touch .jump { display: flex; }
+  .touch .tip { bottom: calc(max(26px, env(safe-area-inset-bottom)) + 118px); }
+
+  .ov { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(13,27,62,.7); z-index: 10; }
+  .ov[hidden] { display: none; }
+  .qcard { background: #fff; color: var(--ink); border-radius: 22px; padding: 16px 18px; width: 100%; max-width: 560px; max-height: 100%; overflow: auto; text-align: center; }
+  .qcard h2 { font-family: var(--display); font-size: clamp(20px, 3.4vw, 28px); margin: 0 0 4px; }
+  .qcard .sub { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+  .qcard .q { font-size: clamp(19px, 3.4vw, 25px); font-weight: 700; margin: 8px 0; line-height: 1.35; }
+  .qcard .show { font-family: var(--display); font-size: clamp(40px, 9vw, 64px); line-height: 1.15; margin: 4px 0; }
+  .qcard .sw { width: 84px; height: 84px; border-radius: 18px; border: 3px solid #333; margin: 4px auto; }
+  .qopts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+  .qopts button { border: 3px solid var(--line); background: #fff; border-radius: 18px; padding: 10px; min-height: 58px; font-size: clamp(18px, 3vw, 22px); font-weight: 700; }
+  .qopts button:hover { border-color: var(--accent); }
+  .qopts button.ok { border-color: var(--ok); background: #E8F5E9; }
+  .qopts button.bad { border-color: var(--bad); background: #FFEBEE; opacity: .55; pointer-events: none; animation: shake .4s; }
+  .qopts button.hint { animation: glow 1s infinite; }
+  .qcard .row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .qcard .later { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 15px; margin-top: 10px; }
+  .qcard .after { color: #2E7D32; font-weight: 700; margin-top: 8px; min-height: 1.4em; }
+  .bigstars { display: flex; justify-content: center; gap: 8px; margin: 6px 0; }
+  .bigstars svg { width: 64px; height: 64px; }
+  .res { display: grid; grid-template-columns: auto auto; gap: 2px 14px; justify-content: center; text-align: left; font-size: 17px; margin: 6px 0; }
+  @media (max-width: 560px) { .hud .nm { flex-basis: 100%; order: -1; } .hud .pill { padding: 5px 8px; font-size: 14px; } #hudTime { display: none; } .jump { width: 96px; height: 96px; } }
+</style>
+<!-- Anonymous visit counter (GoatCounter, no cookies); roboTrack(name) records an event such as a finished level. -->
+<script data-goatcounter="https://robo-klasa-2c.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>window.roboTrack = function (n, t) { t = t || 0; try { var g = window.goatcounter; if (g && g.count) g.count({ path: n, title: n, event: true }); else if (t < 20) setTimeout(function () { roboTrack(n, t + 1); }, 500); } catch (e) {} };</script>
+<!-- roboPlayer(section): once per device 'nowy gracz' on the first game start, then 'gracz wraca' at most once a day (only a date is stored). -->
+<script>window.roboPlayer = function (s) { try { var k = 'robo-gracz-' + s, d = new Date().toDateString(), last = localStorage.getItem(k); if (last === d) return; localStorage.setItem(k, d); roboTrack(s + ' · ' + (last ? 'gracz wraca' : 'nowy gracz')); } catch (e) {} };</script>
+</head>
+<body>
+<div class="wrap"><div id="menu"></div></div>
+<div id="play" hidden>
+  <canvas id="cv"></canvas>
+  <div class="fade" id="fade"></div>
+  <div class="hud">
+    <button class="pill" data-a="map">◀ Menu</button>
+    <span class="nm" id="hudName"></span>
+    <span class="pill" id="hudStage">🚩 1</span>
+    <span class="pill coinpill" id="hudCoins">🪙 0</span>
+    <span class="pill" id="hudGem" title="diament">💎 –</span>
+    <span class="pill" id="hudTime">⏱ 0:00</span>
+    <button class="pill" data-a="pause" aria-label="pauza">⏸</button>
+    <button class="pill" data-a="sound" id="hudSound" aria-label="dźwięk">🔊</button>
+  </div>
+  <div class="toast hide" id="toast"></div>
+  <div class="stick" id="stick"><div class="knob"></div></div>
+  <button class="jump" id="jumpBtn" aria-label="skok">⤒</button>
+  <div class="tip" id="tip"></div>
+  <div class="ov" id="ov" hidden></div>
+</div>
+<script type="module">
+import * as THREE from '../wspolne/three-r160/three.module.min.js';
+'use strict';
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const rnd = n => Math.floor(Math.random() * n), pick = a => a[rnd(a.length)], coin = () => Math.random() < .5;
+const between = (a, b) => a + rnd(b - a + 1);
+const shuffle = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = rnd(i + 1); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+const sample = (a, k) => shuffle(a).slice(0, k);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ================= save: coins and look are shared with Robo Obby (same wardrobe); stars and records are our own ================= */
+const OBBY_KEY = 'robo-obby-2c', SAVE_KEY = 'robo-3d-2c';
+const AV_DEF = { style: 'kid', body: 'blue', visor: 'yellow', pants: 'black', skin: 1, hair: 'brown', hat: 'none', trail: 'none' };
+const load = (k, def) => { try { return Object.assign({}, def, JSON.parse(localStorage.getItem(k) || '{}')); } catch (e) { return { ...def }; } };
+const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let obby = load(OBBY_KEY, { coins: 0, sound: true });
+obby.avatar = Object.assign({}, AV_DEF, obby.avatar);
+let save = load(SAVE_KEY, { stars: {}, best: {} });
+const sound = () => obby.sound !== false;
+const storeAll = () => { put(OBBY_KEY, obby); put(SAVE_KEY, save); };
+function addCoins(n) { const o = load(OBBY_KEY, {}); obby.coins = (o.coins || 0) + n; o.coins = obby.coins; put(OBBY_KEY, o); }   // re-read so a parallel Robo Obby tab is not overwritten
+
+/* ================= sound & speech (same reader as the other games) ================= */
+let actx = null, voice = null, enVoice = null;
+function tone(freqs, dur = .1, type = 'square', vol = .06) {
+  if (!sound()) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    freqs.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * dur;
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .015); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + .03);
+    });
+  } catch (e) {}
+}
+const SFX = {
+  jump: () => tone([420, 640], .05, 'square', .04), coin: () => tone([988, 1319], .05, 'square', .04),
+  pad: () => tone([260, 520, 900], .06, 'triangle', .08), die: () => tone([330, 220, 130], .1, 'sawtooth', .05),
+  cp: () => tone([523, 659, 784, 1047], .09, 'triangle', .08), win: () => tone([523, 659, 784, 1047, 784, 1047, 1319], .11, 'triangle', .08),
+  bad: () => tone([196, 165], .14, 'triangle', .08), gem: () => tone([1047, 1319, 1568, 2093], .07, 'triangle', .07), click: () => tone([700], .03, 'square', .03),
+};
+const ROBOTIC = /eloquence|\b(eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|albert|fred|junior|kathy|ralph|zarvox|trinoids|whisper|bubbles|jester|organ|superstar|wobble|bells|boing|cellos|bahh)\b/i;
+function voiceScore(v, want) {
+  const lang = (v.lang || '').toLowerCase().replace('_', '-'), id = `${v.name} ${v.voiceURI}`;
+  if (!lang.startsWith(want.slice(0, 2))) return -1;
+  let s = lang === want ? 100 : 50;
+  if (/natural|neural/i.test(id)) s += 40; if (/premium/i.test(id)) s += 35; if (/enhanced/i.test(id)) s += 30; if (/google/i.test(id)) s += 25;
+  if (ROBOTIC.test(id)) s -= 80;
+  return s;
+}
+function loadVoice() {
+  if (!('speechSynthesis' in window)) return;
+  let top = -1, topEn = -1;
+  speechSynthesis.getVoices().forEach(v => {
+    const s = voiceScore(v, 'pl-pl'); if (s > top) { top = s; voice = v; }
+    const e = voiceScore(v, 'en-gb'); if (e > topEn) { topEn = e; enVoice = v; }
+  });
+}
+if ('speechSynthesis' in window) { loadVoice(); speechSynthesis.onvoiceschanged = loadVoice; }
+/* English words are marked <span lang="en">…</span> and read by an English voice; the rest by the Polish one. */
+const en = w => `<span lang="en">${w}</span>`;
+const strip = s => String(s || '').replace(/<[^>]+>/g, '');
+function spokenMath(t) {      // voices skip "=", so "4 − 1 = 3" is read as "4 minus 1 to 3"
+  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(/\s+/g, ' ').trim();
+}
+function speechParts(text) {
+  const s = String(text || ''), parts = [], re = /<span lang="en">([\s\S]*?)<\/span>/g;
+  let at = 0;
+  s.replace(re, (m, e, i) => { parts.push([s.slice(at, i), false], [e, true]); at = i + m.length; return m; });
+  parts.push([s.slice(at), false]);
+  return parts.map(([t, e]) => [e ? strip(t).replace(/\s+/g, ' ').trim() : spokenMath(strip(t)), e]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
+}
+function say(text) {
+  const parts = speechParts(text);
+  if (!sound() || !parts.length || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    for (const [t, e] of parts) {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = e ? 'en-GB' : 'pl-PL'; const v = e ? enVoice : voice; if (v) u.voice = v; u.rate = e ? .9 : .95;
+      speechSynthesis.speak(u);
+    }
+  } catch (e) {}
+}
+/* Run fn after at least minMs and after the reader has finished (+ a short pause); 12 s cap because some browsers never clear "speaking". */
+function afterSpeech(minMs, fn) {
+  const t0 = Date.now();
+  let quiet = 0;
+  (function check() {
+    const el = Date.now() - t0, busy = sound() && 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
+    quiet = busy ? 0 : quiet + 150;
+    if (el >= minMs && (quiet >= 300 || el > 12000)) return fn();
+    setTimeout(check, 150);
+  })();
+}
+document.addEventListener('pointerdown', () => {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {}
+}, { capture: true, passive: true });
+
+/* ================= questions from the class topics (same banks as Robo Obby) ================= */
+const NOM = ['', 'pierwsza', 'druga', 'trzecia', 'czwarta', 'piąta', 'szósta', 'siódma', 'ósma', 'dziewiąta', 'dziesiąta', 'jedenasta', 'dwunasta'];
+const GEN = ['', 'pierwszej', 'drugiej', 'trzeciej', 'czwartej', 'piątej', 'szóstej', 'siódmej', 'ósmej', 'dziewiątej', 'dziesiątej', 'jedenastej', 'dwunastej'];
+const DAYS = ['poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela'];
+const PO = ['poniedziałku', 'wtorku', 'środzie', 'czwartku', 'piątku', 'sobocie', 'niedzieli'];
+const COLORS = {
+  red: ['#E53935', 'czerwony'], blue: ['#1E88E5', 'niebieski'], green: ['#43A047', 'zielony'], yellow: ['#FDD835', 'żółty'],
+  orange: ['#FB8C00', 'pomarańczowy'], pink: ['#F06292', 'różowy'], purple: ['#8E24AA', 'fioletowy'], white: ['#F5F5F5', 'biały'],
+  black: ['#37474F', 'czarny'], grey: ['#9E9E9E', 'szary'], brown: ['#795548', 'brązowy'],
+};
+const NW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
+const TOYS = [['⚽', 'ball'], ['🤖', 'robot'], ['🚲', 'bike'], ['🧸', 'teddy bear'], ['🚂', 'train'], ['🛴', 'scooter'], ['🚀', 'spaceship'],
+  ['📺', 'TV'], ['💻', 'computer'], ['⌚', 'watch'], ['🚗', 'car'], ['🎮', 'computer game']];
+const THEATRE = [['Kto ogląda przedstawienie?', 'widz'], ['Kto gra role na scenie?', 'aktor'], ['Kto kieruje przygotowaniem przedstawienia?', 'reżyser'],
+  ['Co oddziela scenę od widowni?', 'kurtyna'], ['Czego potrzebujesz, żeby wejść do teatru?', 'bilet'], ['Co mocno oświetla scenę?', 'reflektor'],
+  ['Dzięki czemu z daleka dobrze widać aktorów?', 'lornetka'], ['Kto robi aktorom makijaż i fryzury?', 'charakteryzator']];
+const SENT = [['Czy pada deszcz', '?'], ['Gdzie jest kurtyna', '?'], ['Kiedy zaczyna się przedstawienie', '?'], ['Uważaj na lawę', '!'],
+  ['Zamknij drzwi', '!'], ['Skacz wysoko', '!'], ['Robo lubi teatr', '.'], ['Dziś świeci słońce', '.'], ['Magnes przyciąga spinacz', '.']];
+const MARK = { '.': ['kropka', 'oznajmujące'], '?': ['pytajnik', 'pytające'], '!': ['wykrzyknik', 'rozkazujące'] };
+const VWORDS = ['kurtyna', 'aktor', 'magnes', 'bilet', 'scena', 'lornetka', 'teatr', 'pogoda', 'kaczka', 'termometr', 'burza', 'robot', 'planeta', 'deszcz', 'łabędź'];
+const MAG = [['📎', 'spinacz', true], ['🔑', 'klucz', true], ['🔩', 'śrubę', true], ['🧷', 'agrafkę', true], ['✏️', 'ołówek', false], ['🍎', 'jabłko', false],
+  ['🧸', 'misia', false], ['📄', 'kartkę', false], ['🎈', 'balon', false]];
+const INSTR = [['Czym mierzymy temperaturę?', 'termometrem'], ['Czym mierzymy prędkość wiatru?', 'wiatromierzem'],
+  ['Czym mierzymy ilość opadów?', 'deszczomierzem'], ['Czym mierzymy ciśnienie?', 'barometrem']];
+const DUCK = [['Kim okazało się brzydkie kaczątko?', 'pięknym łabędziem', ['pięknym łabędziem', 'dużą kaczką', 'szarą gęsią']],
+  ['Kto napisał „Brzydkie kaczątko”?', 'Hans Christian Andersen', ['Hans Christian Andersen', 'Jan Brzechwa', 'Julian Tuwim']],
+  ['Która pora roku była dla kaczątka najtrudniejsza?', 'zima', ['zima', 'wiosna', 'lato']],
+  ['Czego uczy baśń?', 'Nie oceniaj innych po wyglądzie.', ['Nie oceniaj innych po wyglądzie.', 'Zawsze bądź najszybszy.', 'Zimą nie wychodź z domu.']]];
+const mk = (q, ans, pool, extra = {}) => { const opts = shuffle([ans, ...sample(pool.filter(x => x !== ans), 2)]); return { q, opts, ok: opts.indexOf(ans), say: q, ...extra }; };
+function numQ(q, r, extra = {}) {
+  const cand = [...new Set([r + 1, r - 1, r + 2, r - 2, r + 10])].filter(x => x >= 0 && x !== r);
+  const opts = shuffle([r, ...sample(cand, 2)]).map(String);
+  return { q, opts, ok: opts.indexOf(String(r)), say: q, ...extra };
+}
+function genMath() {
+  const k = rnd(7);
+  if (k === 0) { const a = between(5, 9), b = between(11 - a, 9); return numQ('Ile to jest?', a + b, { show: `${a} + ${b}`, say: `Ile to jest ${a} dodać ${b}?`, after: `${a} + ${b} = ${a + b}` }); }
+  if (k === 1) { const a = between(11, 18), b = between(a - 9, 9); return numQ('Ile to jest?', a - b, { show: `${a} − ${b}`, say: `Ile to jest ${a} odjąć ${b}?`, after: `${a} − ${b} = ${a - b}` }); }
+  if (k === 2) {
+    const n = pick(Array.from({ length: 78 }, (_, i) => i + 21).filter(x => x % 10)), tens = coin(), q = `Ile ${tens ? 'dziesiątek' : 'jedności'} ma liczba ${n}?`;
+    return numQ(q, tens ? Math.floor(n / 10) : n % 10, { show: String(n), after: `${n} = ${Math.floor(n / 10) * 10} + ${n % 10}` });
+  }
+  if (k === 3) {
+    const even = coin(), nums = Array.from({ length: 19 }, (_, i) => i + 2);
+    const ans = pick(nums.filter(n => (n % 2 === 0) === even)), others = sample(nums.filter(n => (n % 2 === 0) !== even), 2);
+    const q = `Która liczba jest ${even ? 'parzysta' : 'nieparzysta'}?`, opts = shuffle([ans, ...others]).map(String);
+    return { q, opts, ok: opts.indexOf(String(ans)), say: q, after: `${ans} jest ${even ? 'parzysta' : 'nieparzysta'}.` };
+  }
+  if (k === 4) {
+    const h = between(1, 11), ph = [`kwadrans po ${GEN[h]}`, `wpół do ${GEN[h + 1]}`, `za kwadrans ${NOM[h + 1]}`], t = rnd(3);
+    const opts = shuffle(ph);
+    return { q: 'Jak powiesz, która jest godzina?', show: `${h}:${['15', '30', '45'][t]}`, opts, ok: opts.indexOf(ph[t]), say: 'Jak powiesz, która jest godzina?', after: `${h}:${['15', '30', '45'][t]} to ${ph[t]}.` };
+  }
+  if (k === 5) { const i = rnd(7), q = `Jaki dzień jest po ${PO[i]}?`; return mk(q, DAYS[(i + 1) % 7], DAYS, { after: `Po ${PO[i]} jest ${DAYS[(i + 1) % 7]}.` }); }
+  if (coin()) { const a = between(5, 9), b = between(5, 9), q = `Robo zebrał ${a} monet, a potem jeszcze ${b}. Ile ma monet?`; return numQ(q, a + b, { after: `${a} + ${b} = ${a + b}` }); }
+  const a = between(12, 18), b = between(a - 9, 9), q = `Robo miał ${a} monet. ${b} wpadło do lawy. Ile mu zostało?`;
+  return numQ(q, a - b, { after: `${a} − ${b} = ${a - b}` });
+}
+function genEn() {
+  const k = rnd(4);
+  if (k === 0) { const c = pick(Object.keys(COLORS)); return mk('Jaki to kolor po angielsku?', c, Object.keys(COLORS), { swatch: COLORS[c][0], after: `${COLORS[c][1]} – ${en(c)}` }); }
+  if (k === 1) { const n = between(1, 15); return mk('Jak powiesz tę liczbę po angielsku?', NW[n], [NW[n - 1], NW[n + 1] || NW[n - 2], NW[(n + 5) % 16] || 'one'], { show: String(n), after: `${n} – ${en(NW[n])}` }); }
+  if (k === 2) { const [e, w] = pick(TOYS); return mk('Co to jest po angielsku?', w, TOYS.map(x => x[1]), { show: e, after: en(`It's a ${w}.`) }); }
+  const [e, w] = pick(TOYS), yes = coin(), asked = yes ? w : pick(TOYS.filter(x => x[1] !== w))[1];
+  const opts = ['Yes, it is.', "No, it isn't."];
+  return { q: `Is it a ${asked}?`, show: e, opts, ok: yes ? 0 : 1, say: `Odpowiedz po angielsku. ${en(`Is it a ${asked}?`)}`, after: en(yes ? 'Yes, it is.' : `No, it isn't. It's a ${w}.`) };
+}
+function genPl() {
+  const k = rnd(6);
+  if (k === 0) { const [q, w] = pick(THEATRE); return mk(q, w, THEATRE.map(x => x[1]), { after: `${w[0].toUpperCase() + w.slice(1)}.` }); }
+  if (k === 1) {
+    const [s, m] = pick(SENT), opts = ['.', '?', '!'].map(x => `${x} ${MARK[x][0]}`);
+    return { q: 'Jaki znak postawisz na końcu zdania?', show: `<span style="font-size:.5em">${s}…</span>`, opts, ok: ['.', '?', '!'].indexOf(m), say: `Jaki znak postawisz na końcu zdania: ${s}`, after: `To zdanie ${MARK[m][1]} – na końcu ${MARK[m][0]}.` };
+  }
+  if (k === 2) { const w = pick(VWORDS), n = [...w].filter(ch => 'aąeęioóuy'.includes(ch)).length; return numQ(`Ile samogłosek ma wyraz „${w}”?`, n, { say: `Ile samogłosek ma wyraz ${w}?`, after: `Samogłoski: ${[...w].filter(ch => 'aąeęioóuy'.includes(ch)).join(', ')}.` }); }
+  if (k === 3) {
+    const [e, w, y] = pick(MAG), opts = ['Tak', 'Nie'];
+    return { q: `Czy magnes przyciągnie ${w}?`, show: e, opts, ok: y ? 0 : 1, say: `Czy magnes przyciągnie ${w}?`, after: y ? 'Tak – to jest z żelaza lub stali.' : 'Nie – magnes przyciąga tylko żelazo i stal.' };
+  }
+  if (k === 4) { const [q, a] = pick(INSTR); return mk(q, a, INSTR.map(x => x[1]), { after: `${a[0].toUpperCase() + a.slice(1)}.` }); }
+  const [q, a, o] = pick(DUCK); return mk(q, a, o, { after: a });
+}
+const BANKS = { math: genMath, en: genEn, pl: genPl, mix: () => pick([genMath, genEn, genPl])() };
+
+/* ================= physics constants (1 unit ≈ one block) ================= */
+const GRAV = 28, JUMPV = 10.5, PADV = 17, SPEED = 6.5;      // jump ≈ 2 blocks high and ≈ 4.5 blocks far; jump pad ≈ 5 blocks high
+const PR = .35, PHT = 1.7, STEP = 1 / 120, FALL_Y = -6;       // player half-width and height
+
+/* ================= level: Planeta Klocków (forward is −z; P(x, top, z, width, depth) is a 1-block-thick platform) ================= */
+const PAL = { start: '#66BB6A', stone: '#42A5F5', cp: '#FFCA28', path: '#B0BEC5', mover: '#AB47BC', high: '#26A69A', vanish: '#FF7043', side: '#EC407A', beam: '#8D6E63', stair: '#5C6BC0', end: '#FFEE58' };
+function level1() {
+  const L = { id: 'p1', name: 'Planeta Klocków', pl: 'skoki, lawa, ruchome i znikające klocki', bank: 'mix', boxes: [], coins: [], flags: [], gate: null, gem: null, start: [0, 0, 2] };
+  const P = (x, top, z, w, d, col, extra = {}) => { L.boxes.push({ x, y: top - .5, z, w, h: 1, d, col, kind: 'solid', ...extra }); };
+  const lava = (x, top, z, w, d) => L.boxes.push({ x, y: top - .05, z, w, h: .3, d, col: '#FF5722', kind: 'lava' });
+  const C = (x, y, z) => L.coins.push([x, y, z]);
+  // start and stepping stones
+  P(0, 0, 0, 10, 10, PAL.start); C(0, 1, -3);
+  P(0, 0, -7.5, 3, 3, PAL.stone); C(0, 1, -7.5);
+  P(2, .5, -11.5, 3, 3, PAL.stone); C(2, 1.5, -11.5);
+  P(-1, 1, -15.5, 3, 3, PAL.stone); C(-1, 2, -15.5);
+  P(0, 1.5, -19.5, 3, 3, PAL.stone); C(0, 2.5, -19.5);
+  // flag 1
+  P(0, 1.5, -25, 7, 6, PAL.cp); L.flags.push([2.3, 1.5, -25.5]);
+  // lava strips across a long path
+  P(0, 1.5, -35, 6, 12, PAL.path);
+  lava(0, 1.5, -32, 6, 1.6); lava(0, 1.5, -35.5, 6, 1.6); lava(0, 1.5, -39, 6, 1.6);
+  C(0, 2.5, -30); C(0, 2.5, -33.8); C(0, 2.5, -37.3); C(0, 2.5, -40.3);
+  // moving platforms
+  P(0, 1.5, -44.5, 3, 3, PAL.mover, { move: { ax: 'x', amp: 3, per: 4, ph: 0 } }); C(0, 2.5, -44.5);
+  P(0, 1.5, -49, 3, 3, PAL.mover, { move: { ax: 'x', amp: 3, per: 4, ph: Math.PI } }); C(0, 2.5, -49);
+  // flag 2 and a jump pad up to the high ground
+  P(0, 1.5, -54.5, 7, 6, PAL.cp); L.flags.push([-2.3, 1.5, -54]);
+  L.boxes.push({ x: 0, y: 1.6, z: -56.5, w: 2, h: .2, d: 2, col: '#00E5FF', kind: 'pad' });
+  P(0, 6, -61.5, 5, 5, PAL.high); C(0, 7, -61.5);
+  // vanishing blocks
+  [[-66, 0], [-69, .8], [-72, -.8], [-75, 0]].forEach(([z, x]) => { P(x, 6, z, 2.2, 2.2, PAL.vanish, { kind: 'vanish' }); C(x, 7, z); });
+  // flag 3
+  P(0, 6, -81, 7, 6, PAL.cp); L.flags.push([2.3, 6, -81.5]);
+  // hidden side path to the diamond (to the left)
+  P(-5.5, 7, -81, 2, 2, PAL.side); C(-5.5, 8, -81);
+  P(-9, 8, -81, 2, 2, PAL.side); C(-9, 9, -81);
+  P(-12.5, 9, -81, 2, 2, PAL.side); L.gem = [-12.5, 10.2, -81];
+  // narrow beam and stairs to the finish
+  P(0, 6, -88, 1.8, 7, PAL.beam); C(0, 7, -86); C(0, 7, -89.5);
+  P(1.5, 7, -94.5, 3, 3, PAL.stair); C(1.5, 8, -94.5);
+  P(-1.5, 8, -99, 3, 3, PAL.stair); C(-1.5, 9, -99);
+  P(0, 9, -106, 10, 9, PAL.end); C(-3, 10, -104); C(3, 10, -104);
+  L.gate = [0, 9, -108.5];
+  return L;
+}
+const LEVELS = [level1];
+const LEVEL_INFO = [{ id: 'p1', name: 'Planeta Klocków', pl: 'skoki, lawa, ruchome i znikające klocki', col: '#42A5F5', ring: '#FFF59D' }];
+
+/* ================= three.js scene ================= */
+const cv = $('#cv'), ov = $('#ov'), toastEl = $('#toast'), playEl = $('#play'), menu = $('#menu');
+let renderer = null, scene, camera, avatar = null, shadow, trailPool = [];
+const texCache = {}, matCache = {};
+function blockTexture() {               // light block texture: soft border on every 1×1 square
+  if (texCache.block) return texCache.block;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = 'rgba(0,0,0,.13)'; g.fillRect(0, 0, 64, 4); g.fillRect(0, 0, 4, 64); g.fillRect(0, 60, 64, 4); g.fillRect(60, 0, 4, 64);
+  g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(4, 4, 56, 3);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return texCache.block = t;
+}
+function blockMat(col, extra = {}) {
+  const key = col + JSON.stringify(extra);
+  return matCache[key] || (matCache[key] = new THREE.MeshLambertMaterial({ color: col, map: blockTexture(), ...extra }));
+}
+function blockGeo(w, h, d) {             // box whose UVs repeat once per block on every face
+  const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let f = 0; f < 6; f++) for (let k = 0; k < 4; k++) { const i = f * 4 + k; uv.setXY(i, uv.getX(i) * dims[f][0], uv.getY(i) * dims[f][1]); }
+  return g;
+}
+const plain = col => new THREE.MeshLambertMaterial({ color: col });
+function initGL() {
+  if (renderer) return true;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance' });
+  } catch (e) { renderer = null; return false; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog('#5c6bc0', 45, 110);
+  camera = new THREE.PerspectiveCamera(62, 1, .1, 400);
+  scene.add(new THREE.HemisphereLight('#ffffff', '#5c6bc0', 1.6));
+  const sun = new THREE.DirectionalLight('#ffffff', 1.6); sun.position.set(6, 12, 4); scene.add(sun);
+  // stars and far planets
+  const sg = new THREE.BufferGeometry(), pts = [];
+  for (let i = 0; i < 500; i++) { const a = Math.random() * Math.PI * 2, b = Math.random() * .9 + .05, r = 180; pts.push(Math.cos(a) * Math.cos(b) * r, Math.sin(b) * r - 20, Math.sin(a) * Math.cos(b) * r - 50); }
+  sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 1.2, fog: false })));
+  [[-60, 30, -90, 14, '#FF8A65'], [70, 18, -40, 9, '#4DD0E1'], [30, 45, -170, 20, '#BA68C8'], [-50, -10, -150, 11, '#FFD54F']].forEach(([x, y, z, r, c]) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), new THREE.MeshLambertMaterial({ color: c, fog: false })); m.position.set(x, y, z); scene.add(m);
+  });
+  // lava sea far below
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ color: '#FF7043' }));
+  sea.rotation.x = -Math.PI / 2; sea.position.set(0, -9, -60); scene.add(sea);
+  shadow = new THREE.Mesh(new THREE.CircleGeometry(.45, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .35, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
+  for (let i = 0; i < 40; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(.18, .18, .18), new THREE.MeshBasicMaterial({ color: '#fff', transparent: true })); m.visible = false; scene.add(m); trailPool.push({ m, life: 0 }); }
+  return true;
+}
+
+/* ================= the blocky player (look from the Robo Obby wardrobe) ================= */
+const SKINS = ['#FFDBAC', '#F1C27D', '#E0AC69', '#C68642', '#8D5524'];
+function part(w, h, d, col, x, y, z, parent) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), plain(col)); m.position.set(x, y, z); parent.add(m); return m; }
+function limb(w, h, d, col, x, y, z, parent) {      // pivot at the top so legs and arms swing
+  const p = new THREE.Group(); p.position.set(x, y, z); parent.add(p);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), plain(col)); m.position.y = -h / 2; p.add(m); return p;
+}
+function buildAvatar() {
+  const av = obby.avatar, kid = av.style !== 'robo', g = new THREE.Group();
+  const body = (COLORS[av.body] || COLORS.blue)[0], pants = kid ? (COLORS[av.pants] || COLORS.black)[0] : new THREE.Color(body).multiplyScalar(.6);
+  const skin = kid ? (SKINS[av.skin] || SKINS[1]) : new THREE.Color(body).multiplyScalar(.85);
+  const legs = [limb(.32, .75, .34, pants, -.18, .75, 0, g), limb(.32, .75, .34, pants, .18, .75, 0, g)];
+  part(.75, .7, .42, body, 0, 1.1, 0, g);
+  const arms = [limb(.22, .62, .26, kid ? body : pants, -.5, 1.42, 0, g), limb(.22, .62, .26, kid ? body : pants, .5, 1.42, 0, g)];
+  if (kid) arms.forEach(a => part(.2, .16, .24, skin, 0, -.66, 0, a));
+  const head = new THREE.Group(); head.position.y = 1.47; g.add(head);
+  part(kid ? .52 : .66, .5, kid ? .5 : .56, kid ? skin : new THREE.Color(body).lerp(new THREE.Color('#fff'), .2), 0, .25, 0, head);
+  if (kid) {
+    [-.11, .11].forEach(x => part(.07, .1, .02, '#263238', x, .3, .26, head));
+    part(.18, .04, .02, '#263238', 0, .15, .26, head);
+    if (['none', 'phones', 'cap'].includes(av.hat)) { const hc = (COLORS[av.hair] || COLORS.brown)[0]; part(.56, .12, .54, hc, 0, .54, 0, head); part(.56, .3, .1, hc, 0, .4, -.24, head); }
+  } else {
+    part(.5, .18, .03, (COLORS[av.visor] || COLORS.yellow)[0], 0, .3, .29, head);
+    [-.1, .1].forEach(x => part(.06, .1, .02, '#263238', x, .3, .31, head));
+  }
+  const hat = av.hat, top = .5;
+  if (hat === 'none') { part(.04, .22, .04, '#263238', 0, top + .17, 0, head); const b = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), plain('#E53935')); b.position.y = top + .3; head.add(b); }
+  if (hat === 'cap') { part(.58, .14, .56, '#E53935', 0, top + .07, 0, head); part(.5, .04, .26, '#C62828', 0, top + .02, .36, head); }
+  if (hat === 'phones') { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .03, 6, 16, Math.PI), plain('#263238')); t.position.y = .3; head.add(t); [-.32, .32].forEach(x => part(.08, .2, .2, '#26C6DA', x, .28, 0, head)); }
+  if (hat === 'crown') { const c = new THREE.Mesh(new THREE.CylinderGeometry(.27, .27, .2, 8, 1, true), new THREE.MeshLambertMaterial({ color: '#FFC107', side: THREE.DoubleSide })); c.position.y = top + .1; head.add(c); }
+  if (hat === 'wizard') { const c = new THREE.Mesh(new THREE.ConeGeometry(.36, .6, 12), plain('#5E35B1')); c.position.y = top + .3; head.add(c); }
+  if (hat === 'helmet') { const c = new THREE.Mesh(new THREE.SphereGeometry(.48, 16, 12), new THREE.MeshLambertMaterial({ color: '#B3E5FC', transparent: true, opacity: .35 })); c.position.y = .27; head.add(c); }
+  g.userData = { legs, arms, trail: av.trail };
+  return g;
+}
+
+/* ================= game state ================= */
+let G = null, raf = 0, last = 0, acc = 0;
+const I = { mx: 0, mz: 0, kx: 0, kz: 0, jump: false, jumpPressed: false };
+const cam = { yaw: 0, pitch: .38, dist: 7.5, tx: 0, ty: 0, tz: 0 };
+function track(what) { try { if (window.roboTrack) window.roboTrack(`robo3d · ${what}`); } catch (e) { /* never break the game */ } }
+
+function startLevel(i) {
+  if (!initGL()) return showMap(true);
+  const L = LEVELS[i]();
+  if (G) G.objs.forEach(o => scene.remove(o));
+  const objs = [];
+  const boxes = L.boxes.map(b => {
+    const solid = { ...b, min: new THREE.Vector3(), max: new THREE.Vector3(), on: true, trig: -1, off: 0, dx: 0, dz: 0, bx: b.x, bz: b.z };
+    const mat = b.kind === 'lava' ? new THREE.MeshBasicMaterial({ color: '#FF5722' })
+      : b.kind === 'pad' ? new THREE.MeshBasicMaterial({ color: '#00E5FF' })
+      : b.kind === 'vanish' ? blockMat(b.col, { transparent: true }).clone() : blockMat(b.col);
+    solid.mesh = new THREE.Mesh(blockGeo(b.w, b.h, b.d), mat); solid.mesh.position.set(b.x, b.y, b.z);
+    scene.add(solid.mesh); objs.push(solid.mesh);
+    bounds(solid);
+    return solid;
+  });
+  const coinGeo = new THREE.CylinderGeometry(.3, .3, .08, 16), coinMat = new THREE.MeshLambertMaterial({ color: '#FFC107', emissive: '#7a5200' });
+  const coins = L.coins.map(([x, y, z]) => { const m = new THREE.Mesh(coinGeo, coinMat); m.rotation.x = Math.PI / 2; m.position.set(x, y, z); scene.add(m); objs.push(m); return { x, y, z, m, got: false }; });
+  const flags = L.flags.map(([x, y, z], k) => {
+    const grp = new THREE.Group(); grp.position.set(x, y, z);
+    part(.12, 2.4, .12, '#ECEFF1', 0, 1.2, 0, grp);
+    const cloth = part(.9, .6, .06, '#E53935', .5, 2.05, 0, grp);
+    part(1, .1, 1, '#90A4AE', 0, .05, 0, grp);
+    scene.add(grp); objs.push(grp);
+    return { x, y, z, grp, cloth, on: false, stage: k + 2 };
+  });
+  const [gx, gy, gz] = L.gate;
+  const gate = new THREE.Group(); gate.position.set(gx, gy, gz);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, .22, 10, 32), new THREE.MeshLambertMaterial({ color: '#7E57C2', emissive: '#311b92' })); ring.position.y = 1.7; gate.add(ring);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.3, 32), new THREE.MeshBasicMaterial({ color: '#B388FF', transparent: true, opacity: .55, side: THREE.DoubleSide })); disc.position.y = 1.7; gate.add(disc);
+  scene.add(gate); objs.push(gate);
+  const gemM = new THREE.Mesh(new THREE.OctahedronGeometry(.42), new THREE.MeshLambertMaterial({ color: '#4FC3F7', emissive: '#01579b' }));
+  gemM.position.set(...L.gem); scene.add(gemM); objs.push(gemM);
+  if (avatar) scene.remove(avatar);
+  avatar = buildAvatar(); scene.add(avatar);
+  const [sx, sy, sz] = L.start;
+  G = {
+    i, L, boxes, coins, flags, gate: { x: gx, y: gy, z: gz, ring, disc }, gem: { m: gemM, got: false }, objs,
+    p: { x: sx, y: sy, z: sz, vx: 0, vy: 0, vz: 0, on: false, ground: null, coyote: 0, buf: 0, face: Math.PI, walk: 0 },
+    cp: { x: sx, y: sy, z: sz }, stage: 1, stages: flags.length + 2, t: 0, time: 0, coinsGot: 0, deaths: 0, state: 'play', deadT: 0, cool: null, trailT: 0,
+  };
+  cam.yaw = 0; cam.pitch = .38; cam.tx = sx; cam.ty = sy + 1.4; cam.tz = sz;
+  menu.parentElement.hidden = true; playEl.hidden = false; ov.hidden = true;
+  $('#hudName').textContent = L.name; $('#hudSound').textContent = sound() ? '🔊' : '🔇';
+  resize(); hud(); clearInput();
+  const touch = matchMedia('(pointer: coarse)').matches;
+  playEl.classList.toggle('touch', touch);
+  tipShow(touch ? 'Lewy kciuk: chodzenie · prawy kciuk: obracaj kamerę · zielony przycisk: skok' : 'W A S D albo strzałki: chodzenie · spacja: skok · przeciągnij myszą: kamera');
+  track(`${L.name} · start`); if (window.roboPlayer) roboPlayer('robo3d');
+  startLoop();
+}
+function bounds(b) {
+  b.min.set(b.x - b.w / 2, b.y - b.h / 2, b.z - b.d / 2); b.max.set(b.x + b.w / 2, b.y + b.h / 2, b.z + b.d / 2);
+}
+const overlaps = (p, b, eps = 1e-4) => p.x + PR > b.min.x + eps && p.x - PR < b.max.x - eps && p.z + PR > b.min.z + eps && p.z - PR < b.max.z - eps && p.y + PHT > b.min.y + eps && p.y < b.max.y - eps;
+const collides = b => b.on && (b.kind === 'solid' || b.kind === 'vanish' || b.kind === 'pad');
+
+/* ================= one physics step ================= */
+function update(dt) {
+  if (!G || G.state === 'quiz' || G.state === 'pause' || G.state === 'done') return;
+  G.t += dt;
+  // moving and vanishing blocks
+  for (const b of G.boxes) {
+    if (b.move) {
+      const o = Math.sin(G.t * 2 * Math.PI / b.move.per + b.move.ph) * b.move.amp, nx = b.move.ax === 'x' ? b.bx + o : b.bx, nz = b.move.ax === 'z' ? b.bz + o : b.bz;
+      b.dx = nx - b.x; b.dz = nz - b.z; b.x = nx; b.z = nz; bounds(b); b.mesh.position.set(b.x, b.y, b.z);
+    }
+    if (b.kind === 'vanish') {
+      if (b.trig > 0) { b.trig -= dt; b.mesh.material.opacity = .45 + .55 * Math.abs(Math.sin(b.trig * 18)); if (b.trig <= 0) { b.on = false; b.mesh.visible = false; b.off = 2.5; } }
+      else if (!b.on) { b.off -= dt; if (b.off <= 0 && !overlaps(G.p, b, -.05)) { b.on = true; b.mesh.visible = true; b.mesh.material.opacity = 1; b.trig = -1; } }
+    }
+  }
+  if (G.state === 'dead') { G.deadT -= dt; if (G.deadT <= 0) respawn(); return; }
+  G.time += dt;
+  const p = G.p;
+  // ride a moving platform
+  if (p.on && p.ground && p.ground.move) { p.x += p.ground.dx; p.z += p.ground.dz; }
+  // input relative to the camera
+  let ix = I.mx + I.kx, iz = I.mz + I.kz;
+  const len = Math.hypot(ix, iz); if (len > 1) { ix /= len; iz /= len; }
+  const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+  const wx = (fx * iz + rx * ix) * SPEED, wz = (fz * iz + rz * ix) * SPEED;
+  const k = Math.min(1, dt * (p.on ? 14 : 7));
+  p.vx += (wx - p.vx) * k; p.vz += (wz - p.vz) * k;
+  if (Math.hypot(wx, wz) > .5) { const target = Math.atan2(wx, wz); let d = target - p.face; d = Math.atan2(Math.sin(d), Math.cos(d)); p.face += d * Math.min(1, dt * 14); p.walk += dt * 11; }
+  else p.walk *= .9;
+  // jump with a little forgiveness (coyote time and an input buffer)
+  p.coyote = p.on ? .1 : Math.max(0, p.coyote - dt);
+  if (I.jumpPressed) { p.buf = .14; I.jumpPressed = false; }
+  else p.buf = Math.max(0, p.buf - dt);
+  if (p.buf > 0 && p.coyote > 0) { p.vy = JUMPV; p.on = false; p.coyote = 0; p.buf = 0; SFX.jump(); }
+  if (!I.jump && p.vy > 3 && !p.padBoost) p.vy -= GRAV * dt * 1.2;          // short hop when the button is released early
+  p.vy = Math.max(-30, p.vy - GRAV * dt);
+  // move axis by axis
+  const wasOn = p.on; p.on = false; const prevGround = p.ground; p.ground = null;
+  for (const axis of ['x', 'z']) {
+    p[axis] += p['v' + axis] * dt;
+    for (const b of G.boxes) {
+      if (!collides(b) || !overlaps(p, b)) continue;
+      if (p.y >= b.max.y - .4 && p.vy <= 2) { p.y = b.max.y; continue; }      // small ledge: step up instead of bumping
+      const c = axis === 'x' ? b.x : b.z, half = (axis === 'x' ? b.w : b.d) / 2;
+      p[axis] = p[axis] < c ? c - half - PR : c + half + PR; p['v' + axis] = 0;
+    }
+  }
+  p.y += p.vy * dt;
+  for (const b of G.boxes) {
+    if (!collides(b) || !overlaps(p, b)) continue;
+    if (p.y + PHT / 2 > b.y) { p.y = b.max.y; if (p.vy <= 0) { p.vy = 0; p.on = true; p.ground = b; } }
+    else { p.y = b.min.y - PHT; if (p.vy > 0) p.vy = 0; }
+  }
+  if (!p.on) for (const b of G.boxes) {            // standing exactly on a top counts as ground
+    if (!collides(b)) continue;
+    if (Math.abs(p.y - b.max.y) < .02 && p.vy <= 0 && p.x + PR > b.min.x && p.x - PR < b.max.x && p.z + PR > b.min.z && p.z - PR < b.max.z) { p.on = true; p.ground = b; p.vy = 0; break; }
+  }
+  if (p.on) p.padBoost = false;
+  if (p.on && p.ground) {
+    const g = p.ground;
+    if (g.kind === 'pad') { p.vy = PADV; p.on = false; p.padBoost = true; SFX.pad(); }
+    if (g.kind === 'vanish' && g.trig < 0) g.trig = .6;
+    if (!wasOn && prevGround !== g) p.land = .15;
+  }
+  // dangers
+  for (const b of G.boxes) if (b.kind === 'lava' && p.x + PR > b.min.x && p.x - PR < b.max.x && p.z + PR > b.min.z && p.z - PR < b.max.z && p.y <= b.max.y + .02 && p.y + PHT > b.min.y) return die();
+  if (p.y < FALL_Y) return die();
+  // pickups and checkpoints
+  const cx = p.x, cy = p.y + .9, cz = p.z;
+  for (const c of G.coins) if (!c.got && Math.hypot(c.x - cx, c.y - cy, c.z - cz) < 1) { c.got = true; c.m.visible = false; G.coinsGot++; addCoins(1); SFX.coin(); hud(); }
+  if (!G.gem.got) { const m = G.gem.m.position; if (Math.hypot(m.x - cx, m.y - cy, m.z - cz) < 1.1) { G.gem.got = true; G.gem.m.visible = false; SFX.gem(); toast('💎 Diament znaleziony!', 1800); say('Diament znaleziony!'); hud(); } }
+  for (const f of G.flags) {
+    const d = Math.hypot(f.x - p.x, f.z - p.z), near = d < 1.6 && Math.abs(f.y - p.y) < 1.2;
+    if (G.cool === f && d > 3) G.cool = null;
+    if (near && !f.on && G.cool !== f) return openQuiz('flag', f);
+  }
+  const gt = G.gate;
+  if (Math.hypot(gt.x - p.x, gt.z - p.z) < 1.4 && Math.abs(gt.y - p.y) < 1.5 && G.cool !== gt) return openQuiz('exit', gt);
+  if (G.cool === gt && Math.hypot(gt.x - p.x, gt.z - p.z) > 3) G.cool = null;
+}
+function die() {
+  if (G.state === 'dead') return;
+  G.state = 'dead'; G.deadT = .7; G.deaths++; SFX.die(); $('#fade').classList.add('on');
+}
+function respawn() {
+  const p = G.p;
+  Object.assign(p, { x: G.cp.x, y: G.cp.y, z: G.cp.z, vx: 0, vy: 0, vz: 0, on: false, ground: null, buf: 0, padBoost: false });
+  G.state = 'play'; $('#fade').classList.remove('on');
+  cam.tx = p.x; cam.ty = p.y + 1.4; cam.tz = p.z;
+}
+
+/* ================= quizzes on the flags and at the gate ================= */
+function openQuiz(kind, target) {
+  G.state = 'quiz'; clearInput(); G.p.vx = G.p.vz = 0;
+  const Q = BANKS[G.L.bank]();
+  let wrong = 0;
+  ov.hidden = false;
+  ov.innerHTML = `<div class="qcard"><h2>${kind === 'exit' ? '🌀 Brama na metę' : '🚩 Flaga'}</h2>
+    <div class="sub">${kind === 'exit' ? 'Odpowiedz, żeby przejść przez bramę.' : 'Dobra odpowiedź zapali flagę (+3 🪙). Po upadku wrócisz tutaj.'}</div>
+    ${Q.show ? `<div class="show">${Q.show}</div>` : ''}${Q.swatch ? `<div class="sw" style="background:${Q.swatch}"></div>` : ''}
+    <div class="q">${esc(Q.q)}</div>
+    <div class="qopts">${Q.opts.map((o, k) => `<button data-o="${k}">${esc(o)}</button>`).join('')}</div>
+    <div class="after" id="qa"></div>
+    <button class="later" data-o="later">Później</button></div>`;
+  say(Q.say);
+  ov.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.o === 'later') { G.cool = target; closeOv(); return; }
+    const k = +b.dataset.o;
+    if (k === Q.ok) {
+      b.classList.add('ok'); ov.onclick = null; SFX.cp();
+      $('#qa').textContent = '✔ ' + strip(Q.after || 'Dobrze!'); say(`Dobrze! ${Q.after || ''}`);
+      const run = G;
+      afterSpeech(1300, () => {                 // let the reader finish the explanation before moving on
+        if (!G || G !== run || G.state !== 'quiz') return;
+        if (kind === 'exit') return finish();
+        target.on = true; target.cloth.material = plain('#43A047');
+        G.cp = { x: target.x - (target.x > 0 ? 1.2 : -1.2), y: target.y, z: target.z };
+        G.stage = Math.max(G.stage, target.stage); addCoins(3);
+        track(`${G.L.name} · flaga ${target.stage}${wrong ? ' (po pomyłce)' : ''}`);
+        closeOv(); toast(`🚩 Etap ${target.stage} zaliczony! +3 🪙`, 1800); hud();
+      });
+    } else {
+      b.classList.add('bad'); SFX.bad(); wrong++;
+      $('#qa').textContent = 'Spróbuj jeszcze raz!';
+      if (wrong >= 2) ov.querySelector(`[data-o="${Q.ok}"]`).classList.add('hint');
+    }
+  };
+}
+function closeOv() { ov.hidden = true; ov.innerHTML = ''; ov.onclick = null; if (G && G.state !== 'done') G.state = 'play'; last = performance.now(); }
+function star(on) {
+  const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 20 : 46; p.push(`${(50 + r * Math.cos(a)).toFixed(1)},${(54 + r * Math.sin(a)).toFixed(1)}`); }
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><polygon points="${p.join(' ')}" fill="${on ? '#FFC107' : 'rgba(0,0,0,.08)'}" stroke="${on ? '#F57F17' : '#B0BEC5'}" stroke-width="5" stroke-linejoin="round"/></svg>`;
+}
+function finish() {
+  G.state = 'done'; G.stage = G.stages; SFX.win();
+  const L = G.L, total = G.coins.length, need = Math.ceil(total * .8), coinStar = G.coinsGot >= need, stars = 1 + (coinStar ? 1 : 0) + (G.gem.got ? 1 : 0);
+  const newBest = !save.best[L.id] || G.time < save.best[L.id];
+  save.stars[L.id] = Math.max(save.stars[L.id] || 0, stars);
+  if (newBest) save.best[L.id] = Math.round(G.time * 10) / 10;
+  put(SAVE_KEY, save);
+  track(`${L.name} · meta ${stars}★`);
+  ov.hidden = false;
+  ov.innerHTML = `<div class="qcard"><h2>${stars === 3 ? 'Wspaniale! Wszystkie gwiazdki!' : 'Meta! Brawo!'}</h2>
+    <div class="bigstars">${[1, 2, 3].map(s => star(stars >= s)).join('')}</div>
+    <div class="res"><span>⏱ Czas</span><b>${fmt(G.time)}${newBest ? ' – rekord!' : ''}</b>
+      <span>🪙 Monety</span><b>${G.coinsGot} / ${total}${coinStar ? ' ★' : ` (do gwiazdki: ${need})`}</b>
+      <span>💎 Diament</span><b>${G.gem.got ? 'znaleziony ★' : 'nie znaleziony'}</b>
+      <span>💥 Upadki</span><b>${G.deaths}</b></div>
+    <div class="row"><button class="btn green" data-r="again">Jeszcze raz</button><button class="btn" data-r="map">Menu</button></div>
+    <p>Kolejne planety 3D już niedługo! 🚀</p></div>`;
+  say(stars === 3 ? 'Wspaniale! Wszystkie gwiazdki!' : 'Meta! Brawo!');
+  ov.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const i = G.i; closeOv();
+    if (b.dataset.r === 'again') startLevel(i); else showMap();
+  };
+  hud();
+}
+function pause() {
+  if (!G || G.state !== 'play') return;
+  G.state = 'pause'; clearInput();
+  ov.hidden = false;
+  ov.innerHTML = `<div class="qcard"><h2>⏸ Pauza</h2><div class="row"><button class="btn green" data-r="go">▶ Graj dalej</button><button class="btn" data-r="again">Od początku</button><button class="btn" data-r="map">Menu</button></div></div>`;
+  ov.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const i = G.i; closeOv();
+    if (b.dataset.r === 'again') startLevel(i); else if (b.dataset.r === 'map') showMap();
+  };
+}
+function toast(msg, ms) { toastEl.textContent = msg; toastEl.classList.remove('hide'); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.add('hide'), ms); }
+function tipShow(msg) { const t = $('#tip'); t.textContent = msg; t.classList.remove('hide'); clearTimeout(tipShow.t); tipShow.t = setTimeout(() => t.classList.add('hide'), 7000); }
+function hud() {
+  if (!G) return;
+  $('#hudStage').textContent = `🚩 ${G.stage} / ${G.stages}`;
+  $('#hudCoins').textContent = `🪙 ${G.coinsGot} / ${G.coins.length}`;
+  $('#hudGem').textContent = G.gem.got ? '💎 ✓' : '💎 –';
+  $('#hudTime').textContent = `⏱ ${fmt(G.time)}`;
+}
+
+/* ================= drawing ================= */
+/* distance along the camera ray to the first block (slab test), minus a small margin */
+function camHit(ox, oy, oz, d, maxD) {
+  let best = maxD;
+  for (const b of G.boxes) {
+    if (!collides(b)) continue;
+    let t0 = 0, t1 = best, ok = true;
+    for (const [o, v, lo, hi] of [[ox, d[0], b.min.x, b.max.x], [oy, d[1], b.min.y, b.max.y], [oz, d[2], b.min.z, b.max.z]]) {
+      if (Math.abs(v) < 1e-6) { if (o < lo || o > hi) { ok = false; break; } continue; }
+      let a = (lo - o) / v, c = (hi - o) / v; if (a > c) [a, c] = [c, a];
+      t0 = Math.max(t0, a); t1 = Math.min(t1, c); if (t0 > t1) { ok = false; break; }
+    }
+    if (ok && t0 > .05) best = Math.min(best, t0 - .3);
+  }
+  return Math.max(1.2, best);
+}
+function render(dt) {
+  if (!G || !renderer) return;
+  const p = G.p;
+  // camera follows smoothly from behind/above, the player turns it
+  const f = Math.min(1, dt * 10);
+  cam.tx += (p.x - cam.tx) * f; cam.ty += (p.y + 1.4 - cam.ty) * Math.min(1, dt * 6); cam.tz += (p.z - cam.tz) * f;
+  const cp = Math.cos(cam.pitch), dir = [Math.sin(cam.yaw) * cp, Math.sin(cam.pitch), Math.cos(cam.yaw) * cp];
+  const dist = Math.min(cam.dist, camHit(cam.tx, cam.ty, cam.tz, dir, cam.dist));     // move in front of a block instead of looking from inside it
+  camera.position.set(cam.tx + dir[0] * dist, cam.ty + dir[1] * dist, cam.tz + dir[2] * dist);
+  camera.lookAt(cam.tx, cam.ty, cam.tz);
+  // player
+  avatar.position.set(p.x, p.y, p.z); avatar.rotation.y = p.face; avatar.visible = G.state !== 'dead';
+  const { legs, arms } = avatar.userData, sw = p.on ? Math.sin(p.walk) * Math.min(1, Math.hypot(p.vx, p.vz) / SPEED) * .8 : -.5;
+  legs[0].rotation.x = sw; legs[1].rotation.x = -sw; arms[0].rotation.x = p.on ? -sw : -2.6; arms[1].rotation.x = p.on ? sw : -2.6;
+  if (p.land > 0) { p.land -= dt; avatar.scale.set(1 + p.land, 1 - p.land, 1 + p.land); } else avatar.scale.set(1, 1, 1);
+  // round shadow on the block below (helps judge jumps in 3D)
+  let gy = -100;
+  for (const b of G.boxes) if (collides(b) && p.x > b.min.x - .1 && p.x < b.max.x + .1 && p.z > b.min.z - .1 && p.z < b.max.z + .1 && b.max.y <= p.y + .05 && b.max.y > gy) gy = b.max.y;
+  shadow.visible = gy > -100 && G.state !== 'dead';
+  if (shadow.visible) { shadow.position.set(p.x, gy + .02, p.z); const s = clamp(1 - (p.y - gy) / 8, .4, 1); shadow.scale.set(s, s, s); }
+  // trail from the wardrobe
+  const tr = avatar.userData.trail;
+  if (tr && tr !== 'none' && G.state === 'play' && Math.hypot(p.vx, p.vz) > 2) {
+    G.trailT -= dt;
+    if (G.trailT <= 0) {
+      G.trailT = .04; const t = trailPool.find(q => q.life <= 0);
+      if (t) { t.life = .6; t.m.visible = true; t.m.position.set(p.x + (Math.random() - .5) * .3, p.y + .3 + Math.random() * .8, p.z + (Math.random() - .5) * .3);
+        t.m.material.color.set(tr === 'rainbow' ? `hsl(${(G.t * 300) % 360},90%,60%)` : '#FFF59D'); }
+    }
+  }
+  for (const t of trailPool) if (t.life > 0) { t.life -= dt; t.m.material.opacity = Math.max(0, t.life / .6); t.m.rotation.y += dt * 4; if (t.life <= 0) t.m.visible = false; }
+  // spinning things
+  for (const c of G.coins) if (!c.got) c.m.rotation.z += dt * 3;
+  G.gem.m.rotation.y += dt * 2; G.gem.m.position.y = G.L.gem[1] + Math.sin(G.t * 2) * .15;
+  G.gate.ring.rotation.z += dt; G.gate.disc.material.opacity = .45 + Math.sin(G.t * 3) * .15;
+  for (const fl of G.flags) fl.cloth.rotation.y = Math.sin(G.t * 3 + fl.z) * .25;
+  renderer.render(scene, camera);
+}
+function resize() {
+  if (!renderer) return;
+  const w = playEl.clientWidth || innerWidth, h = playEl.clientHeight || innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 75 : 62; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+let hudT = 0;
+function frame(now) {
+  raf = requestAnimationFrame(frame);
+  const dt = Math.min(.25, (now - last) / 1000); last = now;
+  if (I.kyaw) cam.yaw += I.kyaw * dt * 2.2;
+  acc += dt;
+  while (acc >= STEP) { update(STEP); acc -= STEP; }
+  render(dt);
+  hudT -= dt; if (hudT <= 0) { hudT = .25; hud(); }
+}
+function startLoop() { cancelAnimationFrame(raf); last = performance.now(); acc = 0; raf = requestAnimationFrame(frame); }
+function stopLoop() { cancelAnimationFrame(raf); }
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+/* ================= controls ================= */
+const KEYS = { KeyW: ['kz', 1], ArrowUp: ['kz', 1], KeyS: ['kz', -1], ArrowDown: ['kz', -1], KeyA: ['kx', -1], ArrowLeft: ['kx', -1], KeyD: ['kx', 1], ArrowRight: ['kx', 1], KeyQ: ['kyaw', 1], KeyE: ['kyaw', -1] };
+const down = new Set();
+function syncKeys() { I.kx = 0; I.kz = 0; I.kyaw = 0; for (const c of down) { const k = KEYS[c]; if (k) I[k[0]] += k[1]; } I.kx = clamp(I.kx, -1, 1); I.kz = clamp(I.kz, -1, 1); }
+addEventListener('keydown', e => {
+  if (playEl.hidden || !G) return;
+  if (e.code === 'Space') { if (!I.jump) I.jumpPressed = true; I.jump = true; e.preventDefault(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { if (G.state === 'pause') closeOv(); else pause(); return; }
+  if (KEYS[e.code]) { down.add(e.code); syncKeys(); e.preventDefault(); }
+});
+addEventListener('keyup', e => { if (e.code === 'Space') I.jump = false; down.delete(e.code); syncKeys(); });
+addEventListener('blur', () => clearInput());
+const jumpBtn = $('#jumpBtn'), stickEl = $('#stick'), knob = stickEl.firstElementChild;
+const ptr = new Map();          // pointerId → { role: 'stick' | 'look' | 'jump', ox, oy, lx, ly }
+function clearInput() {
+  ptr.clear(); down.clear(); syncKeys(); I.mx = I.mz = 0; I.jump = false; I.jumpPressed = false;
+  stickEl.classList.remove('on'); jumpBtn.classList.remove('on');
+}
+function setJump() { const on = [...ptr.values()].some(q => q.role === 'jump'); if (on && !I.jump) I.jumpPressed = true; I.jump = on || down.has('Space'); jumpBtn.classList.toggle('on', on); }
+playEl.addEventListener('pointerdown', e => {
+  if (!G || G.state !== 'play' || e.target.closest('.hud, .ov')) return;
+  let role;
+  if (e.target === jumpBtn) role = 'jump';
+  else if (e.pointerType !== 'mouse' && e.clientX < playEl.clientWidth * .45 && ![...ptr.values()].some(q => q.role === 'stick')) role = 'stick';
+  else role = 'look';
+  ptr.set(e.pointerId, { role, ox: e.clientX, oy: e.clientY, lx: e.clientX, ly: e.clientY });
+  try { playEl.setPointerCapture(e.pointerId); } catch (er) {}
+  if (role === 'stick') { stickEl.style.left = e.clientX + 'px'; stickEl.style.top = e.clientY + 'px'; stickEl.classList.add('on'); knob.style.transform = ''; }
+  if (role === 'jump') setJump();
+  $('#tip').classList.add('hide');
+  e.preventDefault();
+});
+playEl.addEventListener('pointermove', e => {
+  const q = ptr.get(e.pointerId); if (!q) return;
+  if (q.role === 'stick') {
+    let dx = e.clientX - q.ox, dy = e.clientY - q.oy; const d = Math.hypot(dx, dy), R = 50;
+    if (d > R) { dx *= R / d; dy *= R / d; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    const m = Math.hypot(dx, dy) / R;
+    I.mx = m < .15 ? 0 : dx / R; I.mz = m < .15 ? 0 : -dy / R;
+  } else if (q.role === 'look') {
+    cam.yaw -= (e.clientX - q.lx) * .008; cam.pitch = clamp(cam.pitch + (e.clientY - q.ly) * .006, .05, 1.2);
+    q.lx = e.clientX; q.ly = e.clientY;
+  }
+});
+function endPtr(e) {
+  const q = ptr.get(e.pointerId); if (!q) return;
+  ptr.delete(e.pointerId);
+  if (q.role === 'stick') { I.mx = I.mz = 0; stickEl.classList.remove('on'); }
+  if (q.role === 'jump') setJump();
+}
+playEl.addEventListener('pointerup', endPtr); playEl.addEventListener('pointercancel', endPtr);
+playEl.addEventListener('contextmenu', e => e.preventDefault());
+playEl.addEventListener('wheel', e => { cam.dist = clamp(cam.dist + Math.sign(e.deltaY) * .6, 4, 12); e.preventDefault(); }, { passive: false });
+document.querySelector('.hud').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const a = b.dataset.a;
+  if (a === 'map') showMap();
+  if (a === 'pause') pause();
+  if (a === 'sound') { obby = Object.assign(load(OBBY_KEY, {}), { sound: !sound() }); obby.avatar = Object.assign({}, AV_DEF, obby.avatar); put(OBBY_KEY, obby); b.textContent = sound() ? '🔊' : '🔇'; if (!sound() && 'speechSynthesis' in window) speechSynthesis.cancel(); }
+});
+
+/* ================= menu ================= */
+function orb(col, ring, n) {
+  return `<svg viewBox="0 0 100 100" class="orb" aria-hidden="true"><ellipse cx="50" cy="54" rx="47" ry="12" fill="none" stroke="${ring}" stroke-width="5" transform="rotate(-18 50 54)" opacity=".9"/>
+    <circle cx="50" cy="50" r="32" fill="${col}" stroke="#333" stroke-width="2.5"/><circle cx="38" cy="40" r="6" fill="#fff" opacity=".35"/>
+    <text x="50" y="60" text-anchor="middle" font-size="26" font-weight="700" fill="#fff" stroke="#333" stroke-width="1" font-family="Fredoka, sans-serif">${n}</text></svg>`;
+}
+function webglOk() { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl'))); } catch (e) { return false; } }
+function showMap(noGl) {
+  stopLoop(); if (G) G.state = 'done';
+  playEl.hidden = true; ov.hidden = true; menu.parentElement.hidden = false; clearInput();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  obby = load(OBBY_KEY, { coins: 0, sound: true }); obby.avatar = Object.assign({}, AV_DEF, obby.avatar); save = load(SAVE_KEY, { stars: {}, best: {} });
+  const gl = !noGl && webglOk();
+  menu.innerHTML = `<div class="top"><a class="pill" href="../">◀ Klasa 2c</a><div><h1>Robo 3D</h1><div class="sub">Tor przeszkód z klocków w 3D</div></div><div class="sp"></div>
+      <span class="pill coinpill">🪙 ${obby.coins || 0}</span><button class="pill" data-a="sound">${sound() ? '🔊' : '🔇'}</button></div>
+    <div class="hello"><p><b>Cześć! To Robo 3D.</b> Biegaj po klockach w trzech wymiarach, przeskakuj lawę, jeździj na ruchomych platformach i uważaj na znikające klocki.
+      Na każdej 🚩 fladze odpowiedz na pytanie z lekcji – wtedy po upadku wrócisz właśnie tam.</p></div>
+    <div class="planets">${LEVEL_INFO.map((l, i) => { const st = save.stars[l.id] || 0;
+      return `<button class="planet" data-lv="${i}"${gl ? '' : ' disabled'}>${orb(l.col, l.ring, '3D')}<div class="nm">${l.name}</div><div class="pl">${l.pl}</div>
+        <div class="stars3">${[1, 2, 3].map(s => star(st >= s)).join('')}</div>${save.best[l.id] ? `<div class="lock">rekord ${fmt(save.best[l.id])}</div>` : ''}</button>`; }).join('')}
+      <button class="planet" disabled>${orb('#90A4AE', '#CFD8DC', '?')}<div class="nm">Wkrótce</div><div class="pl">kolejne planety 3D</div></button></div>
+    ${gl ? '' : '<div class="nogl">Ta przeglądarka nie potrafi wyświetlić grafiki 3D. Spróbuj w innej przeglądarce albo zagraj w <a href="../obby/">Robo Obby</a> (2D).</div>'}
+    <div class="how"><b>Gwiazdki:</b> ★ dojdź do bramy · ★ zbierz co najmniej 8 na 10 monet · ★ znajdź ukryty 💎 diament (rozglądaj się na boki!).<br>
+      <b>Telefon:</b> lewy kciuk – chodzenie (joystick pojawia się tam, gdzie dotkniesz), prawy kciuk – przeciągaj, żeby obracać kamerę, zielony przycisk – skok.<br>
+      <b>Komputer:</b> W A S D albo strzałki – chodzenie, spacja – skok, przeciągnij myszą – kamera, kółko myszy – przybliż/oddal, P – pauza.<br>
+      <b>Monety</b> są wspólne z grą <a href="../obby/">Robo Obby</a> – tam w Szafie zmienisz wygląd postaci i kupisz czapki. Postęp zapisuje się tylko w tej przeglądarce.</div>`;
+}
+menu.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  SFX.click();
+  if (b.dataset.lv != null) return startLevel(+b.dataset.lv);
+  if (b.dataset.a === 'sound') { obby.sound = !sound(); const o = load(OBBY_KEY, {}); o.sound = obby.sound; put(OBBY_KEY, o); b.textContent = sound() ? '🔊' : '🔇'; }
+});
+showMap();
+
+/* debug/test hook (used by the reachability bot; harmless for players) */
+window._r3d = { get G() { return G; }, I, cam, update, startLevel, showMap, stopLoop, startLoop, STEP };
+</script>
+</body>
+</html>
