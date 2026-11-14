@@ -105,6 +105,11 @@
 </div>
 <script type="module">
 import * as THREE from '../wspolne/three-r160/three.module.min.js';
+import { RoundedBoxGeometry } from '../wspolne/three-r160/addons/geometries/RoundedBoxGeometry.js';
+import { EffectComposer } from '../wspolne/three-r160/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from '../wspolne/three-r160/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '../wspolne/three-r160/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '../wspolne/three-r160/addons/postprocessing/OutputPass.js';
 'use strict';
 /* ================= helpers ================= */
 const $ = s => document.querySelector(s);
@@ -298,18 +303,21 @@ const PR = .35, PHT = 1.7, STEP = 1 / 120, FALL_Y = -6;       // player half-wid
 /* ================= level: Planeta Klocków (forward is −z; P(x, top, z, width, depth) is a 1-block-thick platform) ================= */
 const PAL = { start: '#66BB6A', stone: '#42A5F5', cp: '#FFCA28', path: '#B0BEC5', mover: '#AB47BC', high: '#26A69A', vanish: '#FF7043', side: '#EC407A', beam: '#8D6E63', stair: '#5C6BC0', end: '#FFEE58' };
 function level1() {
-  const L = { id: 'p1', name: 'Planeta Klocków', pl: 'skoki, lawa, ruchome i znikające klocki', bank: 'mix', boxes: [], coins: [], flags: [], gate: null, gem: null, start: [0, 0, 2] };
+  const L = { id: 'p1', name: 'Planeta Klocków', pl: 'skoki, lawa, ruchome i znikające klocki', bank: 'mix', boxes: [], coins: [], flags: [], gate: null, gem: null, start: [0, 0, 2], deco: [] };
   const P = (x, top, z, w, d, col, extra = {}) => { L.boxes.push({ x, y: top - .5, z, w, h: 1, d, col, kind: 'solid', ...extra }); };
   const lava = (x, top, z, w, d) => L.boxes.push({ x, y: top - .05, z, w, h: .3, d, col: '#FF5722', kind: 'lava' });
   const C = (x, y, z) => L.coins.push([x, y, z]);
+  const tree = (x, top, z) => { L.boxes.push({ x, y: top + .75, z, w: .45, h: 1.5, d: .45, col: '#6D4C41', kind: 'solid', trunk: true }); L.deco.push(['tree', x, top, z]); };
+  const D = (...a) => L.deco.push(a);
   // start and stepping stones
   P(0, 0, 0, 10, 10, PAL.start); C(0, 1, -3);
+  tree(-3.7, 0, 3.6); tree(3.8, 0, 3.2); tree(-3.9, 0, -3.6); D('flowers', 2.5, 0, -2.5, 3, 3); D('flowers', -2.5, 0, 1, 2, 4); D('crystal', 3.9, 0, -3.9, '#F48FB1');
   P(0, 0, -7.5, 3, 3, PAL.stone); C(0, 1, -7.5);
   P(2, .5, -11.5, 3, 3, PAL.stone); C(2, 1.5, -11.5);
   P(-1, 1, -15.5, 3, 3, PAL.stone); C(-1, 2, -15.5);
   P(0, 1.5, -19.5, 3, 3, PAL.stone); C(0, 2.5, -19.5);
   // flag 1
-  P(0, 1.5, -25, 7, 6, PAL.cp); L.flags.push([2.3, 1.5, -25.5]);
+  P(0, 1.5, -25, 7, 6, PAL.cp); L.flags.push([2.3, 1.5, -25.5]); D('flowers', -2.2, 1.5, -25, 2, 4);
   // lava strips across a long path
   P(0, 1.5, -35, 6, 12, PAL.path);
   lava(0, 1.5, -32, 6, 1.6); lava(0, 1.5, -35.5, 6, 1.6); lava(0, 1.5, -39, 6, 1.6);
@@ -318,22 +326,23 @@ function level1() {
   P(0, 1.5, -44.5, 3, 3, PAL.mover, { move: { ax: 'x', amp: 3, per: 4, ph: 0 } }); C(0, 2.5, -44.5);
   P(0, 1.5, -49, 3, 3, PAL.mover, { move: { ax: 'x', amp: 3, per: 4, ph: Math.PI } }); C(0, 2.5, -49);
   // flag 2 and a jump pad up to the high ground
-  P(0, 1.5, -54.5, 7, 6, PAL.cp); L.flags.push([-2.3, 1.5, -54]);
+  P(0, 1.5, -54.5, 7, 6, PAL.cp); L.flags.push([-2.3, 1.5, -54]); D('crystal', 3, 1.5, -52.2, '#80DEEA');
   L.boxes.push({ x: 0, y: 1.6, z: -56.5, w: 2, h: .2, d: 2, col: '#00E5FF', kind: 'pad' });
-  P(0, 6, -61.5, 5, 5, PAL.high); C(0, 7, -61.5);
+  P(0, 6, -61.5, 5, 5, PAL.high); C(0, 7, -61.5); D('crystal', -2, 6, -63.4, '#B388FF'); D('crystal', 2.1, 6, -59.6, '#80DEEA');
   // vanishing blocks
   [[-66, 0], [-69, .8], [-72, -.8], [-75, 0]].forEach(([z, x]) => { P(x, 6, z, 2.2, 2.2, PAL.vanish, { kind: 'vanish' }); C(x, 7, z); });
   // flag 3
-  P(0, 6, -81, 7, 6, PAL.cp); L.flags.push([2.3, 6, -81.5]);
+  P(0, 6, -81, 7, 6, PAL.cp); L.flags.push([2.3, 6, -81.5]); D('flowers', 2, 6, -79, 2, 1.5);
   // hidden side path to the diamond (to the left)
   P(-5.5, 7, -81, 2, 2, PAL.side); C(-5.5, 8, -81);
   P(-9, 8, -81, 2, 2, PAL.side); C(-9, 9, -81);
-  P(-12.5, 9, -81, 2, 2, PAL.side); L.gem = [-12.5, 10.2, -81];
+  P(-12.5, 9, -81, 2, 2, PAL.side); L.gem = [-12.5, 10.2, -81]; D('crystal', -13.2, 9, -81.7, '#4FC3F7');
   // narrow beam and stairs to the finish
   P(0, 6, -88, 1.8, 7, PAL.beam); C(0, 7, -86); C(0, 7, -89.5);
   P(1.5, 7, -94.5, 3, 3, PAL.stair); C(1.5, 8, -94.5);
   P(-1.5, 8, -99, 3, 3, PAL.stair); C(-1.5, 9, -99);
   P(0, 9, -106, 10, 9, PAL.end); C(-3, 10, -104); C(3, 10, -104);
+  tree(-4.1, 9, -109.8); tree(4.1, 9, -109.8); D('flowers', -3, 9, -102.8, 3, 2); D('flowers', 3, 9, -102.8, 3, 2); D('crystal', -4.2, 9, -102, '#FFD54F'); D('crystal', 4.2, 9, -102, '#F48FB1');
   L.gate = [0, 9, -108.5];
   return L;
 }
@@ -342,89 +351,179 @@ const LEVEL_INFO = [{ id: 'p1', name: 'Planeta Klocków', pl: 'skoki, lawa, ruch
 
 /* ================= three.js scene ================= */
 const cv = $('#cv'), ov = $('#ov'), toastEl = $('#toast'), playEl = $('#play'), menu = $('#menu');
-let renderer = null, scene, camera, avatar = null, shadow, trailPool = [];
-const texCache = {}, matCache = {};
-function blockTexture() {               // light block texture: soft border on every 1×1 square
-  if (texCache.block) return texCache.block;
-  const c = document.createElement('canvas'); c.width = c.height = 64;
-  const g = c.getContext('2d');
-  g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64);
-  g.fillStyle = 'rgba(0,0,0,.13)'; g.fillRect(0, 0, 64, 4); g.fillRect(0, 0, 4, 64); g.fillRect(0, 60, 64, 4); g.fillRect(60, 0, 4, 64);
-  g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(4, 4, 56, 3);
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  return texCache.block = t;
+let renderer = null, scene, camera, avatar = null, shadow, sun, composer = null, bloom = null, lavaTex = null, sparks = null, HQ = true;
+const texCache = {}, matCache = {}, FX = [];
+const TOUCH = matchMedia('(pointer: coarse)').matches;
+function canvasTex(size, draw) { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
+function blockTexture() {               // block texture: soft border and a light top edge on every 1×1 square
+  return texCache.block || (texCache.block = canvasTex(64, (g) => {
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(0, 0, 64, 4); g.fillRect(0, 0, 4, 64); g.fillRect(0, 60, 64, 4); g.fillRect(60, 0, 4, 64);
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(4, 4, 56, 3); g.fillRect(4, 4, 3, 56);
+    for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * .04})`; g.fillRect(4 + Math.random() * 54, 4 + Math.random() * 54, 3, 3); }
+  }));
+}
+function lavaTexture() {                // glowing lava blobs; the texture scrolls in render()
+  return lavaTex || (lavaTex = canvasTex(256, (g, s) => {
+    g.fillStyle = '#E64A19'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 60; i++) {
+      const x = Math.random() * s, y = Math.random() * s, r = 10 + Math.random() * 34;
+      for (const [dx, dy] of [[0, 0], [s, 0], [-s, 0], [0, s], [0, -s]]) {
+        const gr = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+        gr.addColorStop(0, i % 3 ? '#FFB300' : '#FFF59D'); gr.addColorStop(.6, 'rgba(255,111,0,.6)'); gr.addColorStop(1, 'rgba(230,74,25,0)');
+        g.fillStyle = gr; g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+      }
+    }
+  }));
 }
 function blockMat(col, extra = {}) {
   const key = col + JSON.stringify(extra);
-  return matCache[key] || (matCache[key] = new THREE.MeshLambertMaterial({ color: col, map: blockTexture(), ...extra }));
+  return matCache[key] || (matCache[key] = new THREE.MeshStandardMaterial({ color: col, map: blockTexture(), roughness: .78, metalness: 0, ...extra }));
 }
 function blockGeo(w, h, d) {             // box whose UVs repeat once per block on every face
   const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
   for (let f = 0; f < 6; f++) for (let k = 0; k < 4; k++) { const i = f * 4 + k; uv.setXY(i, uv.getX(i) * dims[f][0], uv.getY(i) * dims[f][1]); }
   return g;
 }
-const plain = col => new THREE.MeshLambertMaterial({ color: col });
+const mat = (col, extra = {}) => new THREE.MeshStandardMaterial({ color: col, roughness: .6, metalness: 0, ...extra });
+const glow = (col, k = 1.4) => new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: k, roughness: .3 });
+const rbox = (w, h, d, r = .08) => new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - .001, h / 2 - .001, d / 2 - .001));
+function mesh(geo, m, x = 0, y = 0, z = 0, parent = null, shadows = true) {
+  const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = shadows; o.receiveShadow = shadows; if (parent) parent.add(o); return o;
+}
 function initGL() {
   if (renderer) return true;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
   } catch (e) { renderer = null; return false; }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog('#5c6bc0', 45, 110);
-  camera = new THREE.PerspectiveCamera(62, 1, .1, 400);
-  scene.add(new THREE.HemisphereLight('#ffffff', '#5c6bc0', 1.6));
-  const sun = new THREE.DirectionalLight('#ffffff', 1.6); sun.position.set(6, 12, 4); scene.add(sun);
-  // stars and far planets
-  const sg = new THREE.BufferGeometry(), pts = [];
-  for (let i = 0; i < 500; i++) { const a = Math.random() * Math.PI * 2, b = Math.random() * .9 + .05, r = 180; pts.push(Math.cos(a) * Math.cos(b) * r, Math.sin(b) * r - 20, Math.sin(a) * Math.cos(b) * r - 50); }
-  sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 1.2, fog: false })));
-  [[-60, 30, -90, 14, '#FF8A65'], [70, 18, -40, 9, '#4DD0E1'], [30, 45, -170, 20, '#BA68C8'], [-50, -10, -150, 11, '#FFD54F']].forEach(([x, y, z, r, c]) => {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), new THREE.MeshLambertMaterial({ color: c, fog: false })); m.position.set(x, y, z); scene.add(m);
-  });
-  // lava sea far below
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ color: '#FF7043' }));
-  sea.rotation.x = -Math.PI / 2; sea.position.set(0, -9, -60); scene.add(sea);
-  shadow = new THREE.Mesh(new THREE.CircleGeometry(.45, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .35, depthWrite: false }));
+  scene.fog = new THREE.Fog('#d9c4f5', 55, 170);
+  camera = new THREE.PerspectiveCamera(62, 1, .1, 700);
+  // sky: gradient dome with a warm horizon and a soft sun
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color('#2f54d6') }, mid: { value: new THREE.Color('#9fb3ff') }, hor: { value: new THREE.Color('#ffd6b0') }, low: { value: new THREE.Color('#ff9e6e') } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform vec3 top, mid, hor, low; varying vec3 vP;
+      void main(){ float h = vP.y; vec3 c = h > .25 ? mix(mid, top, smoothstep(.25, .85, h)) : h > 0. ? mix(hor, mid, smoothstep(0., .25, h)) : mix(hor, low, smoothstep(0., -.3, h));
+      gl_FragColor = vec4(c, 1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      }`,
+  }));
+  scene.add(sky);
+  const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(16, 32), new THREE.MeshBasicMaterial({ color: '#fff3c4', fog: false }));
+  sunDisc.position.set(160, 120, -320); sunDisc.lookAt(0, 0, 0); scene.add(sunDisc);
+  // big ringed planet and small moons in the sky
+  const pl = new THREE.Group(); pl.position.set(-150, 90, -300); scene.add(pl);
+  mesh(new THREE.SphereGeometry(45, 40, 24), new THREE.MeshStandardMaterial({ color: '#b388ff', roughness: .9, fog: false }), 0, 0, 0, pl, false);
+  const ringM = mesh(new THREE.RingGeometry(58, 80, 64), new THREE.MeshBasicMaterial({ color: '#ffe0b2', side: THREE.DoubleSide, transparent: true, opacity: .7, fog: false }), 0, 0, 0, pl, false);
+  ringM.rotation.set(1.2, .3, 0);
+  [[140, 60, -260, 12, '#80deea'], [60, 150, -380, 9, '#ffab91'], [-260, 40, -120, 14, '#a5d6a7']].forEach(([x, y, z, r, c]) => mesh(new THREE.SphereGeometry(r, 24, 16), new THREE.MeshStandardMaterial({ color: c, roughness: .9, fog: false }), x, y, z, scene, false));
+  // lights: soft sky light + a sun that casts real shadows (high quality)
+  scene.add(new THREE.HemisphereLight('#e3ecff', '#ff9e6e', 1.35));
+  sun = new THREE.DirectionalLight('#fff4e0', 2.4);
+  sun.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048);
+  Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 });
+  sun.shadow.bias = -.0005; sun.shadow.normalBias = .03;
+  scene.add(sun, sun.target);
+  // lava sea far below, with rising sparks
+  const lt = lavaTexture().clone(); lt.needsUpdate = true; lt.repeat.set(30, 30);
+  const sea = mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshBasicMaterial({ map: lt, color: '#d9a08a' }), 0, -9, -60, scene, false);
+  sea.rotation.x = -Math.PI / 2; sea.userData.tex = lt; scene.userData.sea = sea;
+  const sg = new THREE.BufferGeometry(), sp = new Float32Array(160 * 3);
+  sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  sparks = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffcc66', size: .35, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sparks.userData.v = Array.from({ length: 160 }, () => [0, -100, 0, 0]); scene.add(sparks);
+  // fluffy block clouds (some below the course, some above)
+  const cloudM = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, transparent: true, opacity: .92 });
+  scene.userData.clouds = [];
+  for (let i = 0; i < 18; i++) {
+    const c = new THREE.Group(), n = 3 + rnd(4);
+    for (let k = 0; k < n; k++) mesh(rbox(2.5 + Math.random() * 3, 1.4 + Math.random(), 2.2 + Math.random() * 2, .5), cloudM, k * 1.8 - n, Math.random() * .6, Math.random() * 1.5 - .7, c, false);
+    const below = i % 3 === 0;
+    c.position.set((Math.random() < .5 ? -1 : 1) * (14 + Math.random() * 40), below ? -4 - Math.random() * 3 : 14 + Math.random() * 22, 20 - Math.random() * 150);
+    c.userData.v = .3 + Math.random() * .6; scene.add(c); scene.userData.clouds.push(c);
+  }
+  shadow = new THREE.Mesh(new THREE.CircleGeometry(.45, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .3, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
-  for (let i = 0; i < 40; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(.18, .18, .18), new THREE.MeshBasicMaterial({ color: '#fff', transparent: true })); m.visible = false; scene.add(m); trailPool.push({ m, life: 0 }); }
+  // particle pool (dust, sparkles, trail, fireworks)
+  const pg = new THREE.BoxGeometry(1, 1, 1);
+  for (let i = 0; i < 220; i++) { const m = new THREE.Mesh(pg, new THREE.MeshBasicMaterial({ color: '#fff', transparent: true, depthWrite: false })); m.visible = false; scene.add(m); FX.push({ m, life: 0 }); }
+  // glow (bloom) for lava, coins, the diamond and the gate
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .55, .5, .8); composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+  setQuality(qualityWanted());
   return true;
+}
+/* graphics quality: 'auto' starts beautiful and drops to fast if the device can't keep up */
+function qualityWanted() { const q = save.q || 'auto'; return q === 'low' ? false : q === 'high' ? true : !(save.autoLow); }
+function setQuality(hq) {
+  HQ = hq;
+  if (!renderer) return;
+  const dpr = window.devicePixelRatio || 1;
+  renderer.setPixelRatio(hq ? Math.min(dpr, TOUCH ? 2 : 1.75) : Math.min(dpr, 1.25));
+  renderer.shadowMap.enabled = hq; sun.castShadow = hq;
+  scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  resize();
+}
+function spawnFX(x, y, z, col, n, o = {}) {
+  for (let k = 0; k < n; k++) {
+    const f = FX.find(q => q.life <= 0); if (!f) return;
+    const a = Math.random() * Math.PI * 2, s = (o.speed || 3) * (.4 + Math.random() * .6), up = o.up != null ? o.up : 2;
+    f.life = f.max = (o.life || .7) * (.7 + Math.random() * .6); f.g = o.g != null ? o.g : 6; f.s = (o.size || .14) * (.7 + Math.random() * .6);
+    f.v = [Math.cos(a) * s, up + Math.random() * (o.upr || 2), Math.sin(a) * s];
+    f.m.position.set(x, y, z); f.m.scale.setScalar(f.s); f.m.visible = true;
+    f.m.material.color.set(Array.isArray(col) ? pick(col) : col); f.m.material.opacity = 1;
+  }
 }
 
 /* ================= the blocky player (look from the Robo Obby wardrobe) ================= */
 const SKINS = ['#FFDBAC', '#F1C27D', '#E0AC69', '#C68642', '#8D5524'];
-function part(w, h, d, col, x, y, z, parent) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), plain(col)); m.position.set(x, y, z); parent.add(m); return m; }
+function part(w, h, d, col, x, y, z, parent, r = .05) { return mesh(rbox(w, h, d, r), typeof col === 'object' && col.isMaterial ? col : mat(col), x, y, z, parent); }
 function limb(w, h, d, col, x, y, z, parent) {      // pivot at the top so legs and arms swing
   const p = new THREE.Group(); p.position.set(x, y, z); parent.add(p);
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), plain(col)); m.position.y = -h / 2; p.add(m); return p;
+  part(w, h, d, col, 0, -h / 2, 0, p, .07); return p;
 }
 function buildAvatar() {
-  const av = obby.avatar, kid = av.style !== 'robo', g = new THREE.Group();
-  const body = (COLORS[av.body] || COLORS.blue)[0], pants = kid ? (COLORS[av.pants] || COLORS.black)[0] : new THREE.Color(body).multiplyScalar(.6);
-  const skin = kid ? (SKINS[av.skin] || SKINS[1]) : new THREE.Color(body).multiplyScalar(.85);
-  const legs = [limb(.32, .75, .34, pants, -.18, .75, 0, g), limb(.32, .75, .34, pants, .18, .75, 0, g)];
-  part(.75, .7, .42, body, 0, 1.1, 0, g);
-  const arms = [limb(.22, .62, .26, kid ? body : pants, -.5, 1.42, 0, g), limb(.22, .62, .26, kid ? body : pants, .5, 1.42, 0, g)];
-  if (kid) arms.forEach(a => part(.2, .16, .24, skin, 0, -.66, 0, a));
-  const head = new THREE.Group(); head.position.y = 1.47; g.add(head);
-  part(kid ? .52 : .66, .5, kid ? .5 : .56, kid ? skin : new THREE.Color(body).lerp(new THREE.Color('#fff'), .2), 0, .25, 0, head);
+  const av = obby.avatar, kid = av.style !== 'robo', g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const shirt = (COLORS[av.body] || COLORS.blue)[0], pants = kid ? (COLORS[av.pants] || COLORS.black)[0] : new THREE.Color(shirt).multiplyScalar(.6);
+  const skin = kid ? (SKINS[av.skin] || SKINS[1]) : new THREE.Color(shirt).multiplyScalar(.85);
+  const legs = [limb(.32, .75, .34, pants, -.18, .75, 0, body), limb(.32, .75, .34, pants, .18, .75, 0, body)];
+  legs.forEach(l => part(.34, .14, .42, kid ? '#37474F' : '#263238', 0, -.7, .04, l, .05));        // shoes
+  const torso = part(.78, .72, .44, shirt, 0, 1.1, 0, body, .1);
+  if (kid) part(.3, .3, .02, new THREE.Color(shirt).lerp(new THREE.Color('#fff'), .45), 0, 1.15, .225, body, .01);   // little logo on the shirt
+  else part(.26, .16, .02, glow('#FDD835', .8), 0, 1.15, .225, body, .01);
+  const arms = [limb(.24, .64, .28, kid ? shirt : pants, -.52, 1.42, 0, body), limb(.24, .64, .28, kid ? shirt : pants, .52, 1.42, 0, body)];
+  arms.forEach(a => part(.22, .18, .26, skin, 0, -.66, 0, a, .07));
+  const head = new THREE.Group(); head.position.y = 1.47; body.add(head);
+  part(kid ? .56 : .68, .54, kid ? .54 : .58, kid ? skin : new THREE.Color(shirt).lerp(new THREE.Color('#fff'), .2), 0, .27, 0, head, .14);
+  const eyes = new THREE.Group(); eyes.position.set(0, .32, kid ? .275 : .3); head.add(eyes);
   if (kid) {
-    [-.11, .11].forEach(x => part(.07, .1, .02, '#263238', x, .3, .26, head));
-    part(.18, .04, .02, '#263238', 0, .15, .26, head);
-    if (['none', 'phones', 'cap'].includes(av.hat)) { const hc = (COLORS[av.hair] || COLORS.brown)[0]; part(.56, .12, .54, hc, 0, .54, 0, head); part(.56, .3, .1, hc, 0, .4, -.24, head); }
+    [-.12, .12].forEach(x => { mesh(rbox(.1, .13, .03, .03), mat('#263238'), x, 0, 0, eyes, false); mesh(new THREE.PlaneGeometry(.03, .03), new THREE.MeshBasicMaterial({ color: '#fff' }), x + .02, .03, .02, eyes, false); });
+    const smile = mesh(new THREE.TorusGeometry(.08, .016, 6, 12, Math.PI), mat('#5d4037'), 0, .16, .28, head, false); smile.rotation.z = Math.PI;
+    [-.2, .2].forEach(x => mesh(new THREE.CircleGeometry(.045, 12), new THREE.MeshBasicMaterial({ color: '#ff8a80', transparent: true, opacity: .55 }), x, .2, .276, head, false));
+    if (['none', 'phones', 'cap'].includes(av.hat)) { const hc = (COLORS[av.hair] || COLORS.brown)[0]; part(.6, .14, .58, hc, 0, .57, 0, head, .06); part(.6, .34, .12, hc, 0, .42, -.25, head, .05); part(.12, .2, .5, hc, -.25, .45, 0, head, .04); part(.12, .2, .5, hc, .25, .45, 0, head, .04); }
   } else {
-    part(.5, .18, .03, (COLORS[av.visor] || COLORS.yellow)[0], 0, .3, .29, head);
-    [-.1, .1].forEach(x => part(.06, .1, .02, '#263238', x, .3, .31, head));
+    part(.54, .2, .04, glow((COLORS[av.visor] || COLORS.yellow)[0], 1.1), 0, 0, 0, eyes, .03);
+    [-.11, .11].forEach(x => mesh(rbox(.07, .1, .02, .02), mat('#263238'), x, 0, .025, eyes, false));
   }
-  const hat = av.hat, top = .5;
-  if (hat === 'none') { part(.04, .22, .04, '#263238', 0, top + .17, 0, head); const b = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), plain('#E53935')); b.position.y = top + .3; head.add(b); }
-  if (hat === 'cap') { part(.58, .14, .56, '#E53935', 0, top + .07, 0, head); part(.5, .04, .26, '#C62828', 0, top + .02, .36, head); }
-  if (hat === 'phones') { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .03, 6, 16, Math.PI), plain('#263238')); t.position.y = .3; head.add(t); [-.32, .32].forEach(x => part(.08, .2, .2, '#26C6DA', x, .28, 0, head)); }
-  if (hat === 'crown') { const c = new THREE.Mesh(new THREE.CylinderGeometry(.27, .27, .2, 8, 1, true), new THREE.MeshLambertMaterial({ color: '#FFC107', side: THREE.DoubleSide })); c.position.y = top + .1; head.add(c); }
-  if (hat === 'wizard') { const c = new THREE.Mesh(new THREE.ConeGeometry(.36, .6, 12), plain('#5E35B1')); c.position.y = top + .3; head.add(c); }
-  if (hat === 'helmet') { const c = new THREE.Mesh(new THREE.SphereGeometry(.48, 16, 12), new THREE.MeshLambertMaterial({ color: '#B3E5FC', transparent: true, opacity: .35 })); c.position.y = .27; head.add(c); }
-  g.userData = { legs, arms, trail: av.trail };
+  const hat = av.hat, top = .54;
+  if (hat === 'none') { part(.05, .22, .05, '#263238', 0, top + .14, 0, head, .02); mesh(new THREE.SphereGeometry(.08, 12, 10), glow('#ff5252', 1.2), 0, top + .28, 0, head); }
+  if (hat === 'cap') { part(.62, .16, .6, '#E53935', 0, top + .07, 0, head, .07); part(.52, .05, .28, '#C62828', 0, top + .02, .38, head, .02); }
+  if (hat === 'phones') { mesh(new THREE.TorusGeometry(.34, .035, 8, 20, Math.PI), mat('#263238'), 0, .3, 0, head); [-.34, .34].forEach(x => part(.1, .22, .22, '#26C6DA', x, .28, 0, head, .05)); }
+  if (hat === 'crown') {
+    const c = mesh(new THREE.CylinderGeometry(.29, .29, .2, 8, 1, true), new THREE.MeshStandardMaterial({ color: '#FFC107', metalness: .8, roughness: .25, side: THREE.DoubleSide, emissive: '#7a5200', emissiveIntensity: .4 }), 0, top + .1, 0, head);
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; mesh(new THREE.ConeGeometry(.05, .14, 4), c.material, Math.cos(a) * .29, top + .27, Math.sin(a) * .29, head); }
+    mesh(new THREE.OctahedronGeometry(.05), glow('#E53935', 1), 0, top + .1, .3, head);
+  }
+  if (hat === 'wizard') { mesh(new THREE.ConeGeometry(.38, .7, 16), mat('#5E35B1'), 0, top + .35, 0, head); mesh(new THREE.TorusGeometry(.36, .04, 8, 20), mat('#FFEB3B'), 0, top + .04, 0, head).rotation.x = Math.PI / 2; mesh(new THREE.OctahedronGeometry(.06), glow('#FFEB3B', 1.2), .1, top + .4, .25, head); }
+  if (hat === 'helmet') mesh(new THREE.SphereGeometry(.5, 24, 16), new THREE.MeshStandardMaterial({ color: '#B3E5FC', transparent: true, opacity: .3, roughness: .05, metalness: .3 }), 0, .27, 0, head, false);
+  g.userData = { body, torso, head, eyes, legs, arms, trail: av.trail, blink: 2 };
   return g;
 }
 
@@ -439,40 +538,78 @@ function startLevel(i) {
   const L = LEVELS[i]();
   if (G) G.objs.forEach(o => scene.remove(o));
   const objs = [];
+  const add = o => { scene.add(o); objs.push(o); return o; };
+  const rockM = new THREE.MeshStandardMaterial({ color: '#8d6e63', roughness: .95, flatShading: true }), rock2 = new THREE.MeshStandardMaterial({ color: '#6d4c41', roughness: .95, flatShading: true });
   const boxes = L.boxes.map(b => {
     const solid = { ...b, min: new THREE.Vector3(), max: new THREE.Vector3(), on: true, trig: -1, off: 0, dx: 0, dz: 0, bx: b.x, bz: b.z };
-    const mat = b.kind === 'lava' ? new THREE.MeshBasicMaterial({ color: '#FF5722' })
-      : b.kind === 'pad' ? new THREE.MeshBasicMaterial({ color: '#00E5FF' })
-      : b.kind === 'vanish' ? blockMat(b.col, { transparent: true }).clone() : blockMat(b.col);
-    solid.mesh = new THREE.Mesh(blockGeo(b.w, b.h, b.d), mat); solid.mesh.position.set(b.x, b.y, b.z);
-    scene.add(solid.mesh); objs.push(solid.mesh);
+    let m;
+    if (b.kind === 'lava') { const t = lavaTexture().clone(); t.needsUpdate = true; t.repeat.set(b.w / 3, b.d / 3); m = new THREE.MeshBasicMaterial({ map: t }); }
+    else if (b.kind === 'pad') m = glow('#00E5FF', 1.2);
+    else if (b.kind === 'vanish') m = blockMat(b.col, { transparent: true }).clone();
+    else if (b.trunk) m = mat('#6D4C41', { roughness: .9 });
+    else m = blockMat(b.col, b.move ? { emissive: b.col, emissiveIntensity: .25 } : {});
+    solid.mesh = add(mesh(b.trunk ? rbox(b.w, b.h, b.d, .08) : blockGeo(b.w, b.h, b.d), m, b.x, b.y, b.z));
+    if (b.kind === 'lava' || b.kind === 'pad') solid.mesh.castShadow = false;
+    // floating-island rock under every fixed platform
+    if (b.kind === 'solid' && !b.move && !b.trunk && b.h === 1) {
+      const r = Math.min(b.w, b.d) * .62, hgt = Math.min(5, 1.2 + Math.max(b.w, b.d) * .45);
+      const cone = add(mesh(new THREE.CylinderGeometry(r, r * .15, hgt, 7, 2), rock2, b.x, b.y - .5 - hgt / 2, b.z, null, false));
+      cone.rotation.y = b.x * 1.7 + b.z; cone.scale.set(b.w / Math.min(b.w, b.d), 1, b.d / Math.min(b.w, b.d)); cone.receiveShadow = true;
+      add(mesh(new THREE.BoxGeometry(b.w * .98, .35, b.d * .98), rockM, b.x, b.y - .62, b.z, null, false));
+    }
     bounds(solid);
     return solid;
   });
-  const coinGeo = new THREE.CylinderGeometry(.3, .3, .08, 16), coinMat = new THREE.MeshLambertMaterial({ color: '#FFC107', emissive: '#7a5200' });
-  const coins = L.coins.map(([x, y, z]) => { const m = new THREE.Mesh(coinGeo, coinMat); m.rotation.x = Math.PI / 2; m.position.set(x, y, z); scene.add(m); objs.push(m); return { x, y, z, m, got: false }; });
+  // decorations: trees, crystals and flowers (no collisions except the tree trunks above)
+  const leafM = [mat('#43A047'), mat('#66BB6A'), mat('#2E7D32')], flowerC = ['#F06292', '#FFEB3B', '#FFFFFF', '#BA68C8', '#FF7043'];
+  for (const [kind, x, y, z, a, b2] of L.deco) {
+    if (kind === 'tree') {
+      const g = add(new THREE.Group()); g.position.set(x, y, z);
+      part(1.6, 1.2, 1.6, leafM[0], 0, 1.9, 0, g, .25); part(1.15, .9, 1.15, leafM[1], .1, 2.8, -.05, g, .22); part(.7, .6, .7, leafM[2], -.05, 3.45, .05, g, .18);
+    }
+    if (kind === 'crystal') {
+      const g = add(new THREE.Group()); g.position.set(x, y, z); const cm = glow(a || '#80DEEA', .9);
+      [[0, .55, 0, .55], [.3, .35, .2, .35], [-.25, .3, -.15, .3]].forEach(([dx, h, dz, s]) => { const c = mesh(new THREE.OctahedronGeometry(s), cm, dx, h, dz, g); c.scale.y = 1.8; c.rotation.y = dx * 3; });
+    }
+    if (kind === 'flowers') {
+      for (let k = 0; k < 10; k++) {
+        const fx = x + (Math.random() - .5) * a, fz = z + (Math.random() - .5) * b2, g = add(new THREE.Group()); g.position.set(fx, y, fz);
+        mesh(new THREE.BoxGeometry(.05, .3, .05), leafM[0], 0, .15, 0, g, false); mesh(new THREE.BoxGeometry(.18, .12, .18), mat(pick(flowerC)), 0, .33, 0, g, false);
+      }
+    }
+  }
+  const coinGeo = new THREE.CylinderGeometry(.32, .32, .09, 24), coinMat = new THREE.MeshStandardMaterial({ color: '#FFC107', metalness: .7, roughness: .25, emissive: '#b37a00', emissiveIntensity: .7 });
+  const starGeo = new THREE.BoxGeometry(.14, .14, .1), starMat = mat('#FFE082', { emissive: '#FFE082', emissiveIntensity: .6 });
+  const coins = L.coins.map(([x, y, z]) => {
+    const m = add(mesh(coinGeo, coinMat, x, y, z)); m.rotation.x = Math.PI / 2; m.castShadow = false;
+    mesh(starGeo, starMat, 0, 0, 0, m, false).rotation.y = Math.PI / 4;
+    return { x, y, z, m, got: false };
+  });
   const flags = L.flags.map(([x, y, z], k) => {
-    const grp = new THREE.Group(); grp.position.set(x, y, z);
-    part(.12, 2.4, .12, '#ECEFF1', 0, 1.2, 0, grp);
-    const cloth = part(.9, .6, .06, '#E53935', .5, 2.05, 0, grp);
-    part(1, .1, 1, '#90A4AE', 0, .05, 0, grp);
-    scene.add(grp); objs.push(grp);
+    const grp = add(new THREE.Group()); grp.position.set(x, y, z);
+    part(.12, 2.5, .12, '#ECEFF1', 0, 1.25, 0, grp, .05);
+    mesh(new THREE.SphereGeometry(.1, 12, 8), mat('#FFC107', { metalness: .6, roughness: .3 }), 0, 2.55, 0, grp);
+    const cloth = mesh(new THREE.PlaneGeometry(1, .65, 8, 2), mat('#E53935', { side: THREE.DoubleSide }), .56, 2.12, 0, grp);
+    cloth.userData.base = cloth.geometry.attributes.position.array.slice();
+    part(1.1, .14, 1.1, '#90A4AE', 0, .07, 0, grp, .05);
     return { x, y, z, grp, cloth, on: false, stage: k + 2 };
   });
   const [gx, gy, gz] = L.gate;
-  const gate = new THREE.Group(); gate.position.set(gx, gy, gz);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, .22, 10, 32), new THREE.MeshLambertMaterial({ color: '#7E57C2', emissive: '#311b92' })); ring.position.y = 1.7; gate.add(ring);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.3, 32), new THREE.MeshBasicMaterial({ color: '#B388FF', transparent: true, opacity: .55, side: THREE.DoubleSide })); disc.position.y = 1.7; gate.add(disc);
-  scene.add(gate); objs.push(gate);
-  const gemM = new THREE.Mesh(new THREE.OctahedronGeometry(.42), new THREE.MeshLambertMaterial({ color: '#4FC3F7', emissive: '#01579b' }));
-  gemM.position.set(...L.gem); scene.add(gemM); objs.push(gemM);
+  const gate = add(new THREE.Group()); gate.position.set(gx, gy, gz);
+  const ring = mesh(new THREE.TorusGeometry(1.5, .24, 14, 48), glow('#7C4DFF', 1.6), 0, 1.75, 0, gate);
+  const disc = mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshBasicMaterial({ color: '#E1BEE7', transparent: true, opacity: .55, side: THREE.DoubleSide, depthWrite: false }), 0, 1.75, 0, gate, false);
+  [-1.75, 1.75].forEach(dx => part(.5, .5, .5, '#5E35B1', dx, .25, 0, gate, .08));
+  const gemM = add(mesh(new THREE.OctahedronGeometry(.42), new THREE.MeshStandardMaterial({ color: '#4FC3F7', emissive: '#29B6F6', emissiveIntensity: 1.3, roughness: .1, metalness: .2 }), ...L.gem));
+  gemM.scale.y = 1.3;
+  // a soft beam of light shows from afar where the diamond is hidden
+  const beam = add(mesh(new THREE.CylinderGeometry(.35, .5, 14, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#81D4FA', transparent: true, opacity: .18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), L.gem[0], L.gem[1] + 6, L.gem[2], null, false));
   if (avatar) scene.remove(avatar);
-  avatar = buildAvatar(); scene.add(avatar);
+  avatar = buildAvatar(); avatar.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(avatar);
   const [sx, sy, sz] = L.start;
   G = {
-    i, L, boxes, coins, flags, gate: { x: gx, y: gy, z: gz, ring, disc }, gem: { m: gemM, got: false }, objs,
+    i, L, boxes, coins, flags, gate: { x: gx, y: gy, z: gz, ring, disc }, gem: { m: gemM, got: false, beam }, objs,
     p: { x: sx, y: sy, z: sz, vx: 0, vy: 0, vz: 0, on: false, ground: null, coyote: 0, buf: 0, face: Math.PI, walk: 0 },
-    cp: { x: sx, y: sy, z: sz }, stage: 1, stages: flags.length + 2, t: 0, time: 0, coinsGot: 0, deaths: 0, state: 'play', deadT: 0, cool: null, trailT: 0,
+    cp: { x: sx, y: sy, z: sz }, stage: 1, stages: flags.length + 2, t: 0, time: 0, coinsGot: 0, deaths: 0, state: 'play', deadT: 0, cool: null, trailT: 0, fps: { n: 0, t: 0, done: false }, fw: 0,
   };
   cam.yaw = 0; cam.pitch = .38; cam.tx = sx; cam.ty = sy + 1.4; cam.tz = sz;
   menu.parentElement.hidden = true; playEl.hidden = false; ov.hidden = true;
@@ -550,17 +687,17 @@ function update(dt) {
   if (p.on) p.padBoost = false;
   if (p.on && p.ground) {
     const g = p.ground;
-    if (g.kind === 'pad') { p.vy = PADV; p.on = false; p.padBoost = true; SFX.pad(); }
+    if (g.kind === 'pad') { p.vy = PADV; p.on = false; p.padBoost = true; SFX.pad(); spawnFX(p.x, p.y + .1, p.z, ['#00E5FF', '#FFFFFF'], 16, { speed: 3, up: 3, life: .6 }); }
     if (g.kind === 'vanish' && g.trig < 0) g.trig = .6;
-    if (!wasOn && prevGround !== g) p.land = .15;
+    if (!wasOn && prevGround !== g) { p.land = .15; spawnFX(p.x, p.y + .05, p.z, ['#FFFFFF', '#ECEFF1'], 7, { speed: 2.2, up: .8, upr: .8, g: 3, life: .45, size: .13 }); }
   }
   // dangers
   for (const b of G.boxes) if (b.kind === 'lava' && p.x + PR > b.min.x && p.x - PR < b.max.x && p.z + PR > b.min.z && p.z - PR < b.max.z && p.y <= b.max.y + .02 && p.y + PHT > b.min.y) return die();
   if (p.y < FALL_Y) return die();
   // pickups and checkpoints
   const cx = p.x, cy = p.y + .9, cz = p.z;
-  for (const c of G.coins) if (!c.got && Math.hypot(c.x - cx, c.y - cy, c.z - cz) < 1) { c.got = true; c.m.visible = false; G.coinsGot++; addCoins(1); SFX.coin(); hud(); }
-  if (!G.gem.got) { const m = G.gem.m.position; if (Math.hypot(m.x - cx, m.y - cy, m.z - cz) < 1.1) { G.gem.got = true; G.gem.m.visible = false; SFX.gem(); toast('💎 Diament znaleziony!', 1800); say('Diament znaleziony!'); hud(); } }
+  for (const c of G.coins) if (!c.got && Math.hypot(c.x - cx, c.y - cy, c.z - cz) < 1) { c.got = true; c.m.visible = false; G.coinsGot++; addCoins(1); SFX.coin(); hud(); spawnFX(c.x, c.m.position.y, c.z, ['#FFD54F', '#FFF59D', '#FFB300'], 12, { speed: 2.6, up: 2, g: 5, life: .55, size: .12 }); }
+  if (!G.gem.got) { const m = G.gem.m.position; if (Math.hypot(m.x - cx, m.y - cy, m.z - cz) < 1.1) { G.gem.got = true; G.gem.m.visible = false; G.gem.beam.visible = false; SFX.gem(); spawnFX(m.x, m.y, m.z, ['#4FC3F7', '#E1F5FE', '#B388FF'], 36, { speed: 4, up: 3, life: 1, size: .15 }); toast('💎 Diament znaleziony!', 1800); say('Diament znaleziony!'); hud(); } }
   for (const f of G.flags) {
     const d = Math.hypot(f.x - p.x, f.z - p.z), near = d < 1.6 && Math.abs(f.y - p.y) < 1.2;
     if (G.cool === f && d > 3) G.cool = null;
@@ -573,6 +710,7 @@ function update(dt) {
 function die() {
   if (G.state === 'dead') return;
   G.state = 'dead'; G.deadT = .7; G.deaths++; SFX.die(); $('#fade').classList.add('on');
+  spawnFX(G.p.x, G.p.y + .8, G.p.z, ['#FF7043', '#FFCA28', '#FFFFFF'], 22, { speed: 4, up: 3, life: .7 });
 }
 function respawn() {
   const p = G.p;
@@ -606,7 +744,7 @@ function openQuiz(kind, target) {
       afterSpeech(1300, () => {                 // let the reader finish the explanation before moving on
         if (!G || G !== run || G.state !== 'quiz') return;
         if (kind === 'exit') return finish();
-        target.on = true; target.cloth.material = plain('#43A047');
+        target.on = true; target.cloth.material = mat('#43A047', { side: THREE.DoubleSide, emissive: '#43A047', emissiveIntensity: .35 }); spawnFX(target.x, target.y + 2.2, target.z, ['#69F0AE', '#FFFFFF', '#FFEB3B'], 30, { speed: 3.5, up: 2, life: .9 });
         G.cp = { x: target.x - (target.x > 0 ? 1.2 : -1.2), y: target.y, z: target.z };
         G.stage = Math.max(G.stage, target.stage); addCoins(3);
         track(`${G.L.name} · flaga ${target.stage}${wrong ? ' (po pomyłce)' : ''}`);
@@ -625,7 +763,7 @@ function star(on) {
   return `<svg viewBox="0 0 100 100" aria-hidden="true"><polygon points="${p.join(' ')}" fill="${on ? '#FFC107' : 'rgba(0,0,0,.08)'}" stroke="${on ? '#F57F17' : '#B0BEC5'}" stroke-width="5" stroke-linejoin="round"/></svg>`;
 }
 function finish() {
-  G.state = 'done'; G.stage = G.stages; SFX.win();
+  G.state = 'done'; G.stage = G.stages; G.fw = 5; SFX.win();
   const L = G.L, total = G.coins.length, need = Math.ceil(total * .8), coinStar = G.coinsGot >= need, stars = 1 + (coinStar ? 1 : 0) + (G.gem.got ? 1 : 0);
   const newBest = !save.best[L.id] || G.time < save.best[L.id];
   save.stars[L.id] = Math.max(save.stars[L.id] || 0, stars);
@@ -653,13 +791,18 @@ function pause() {
   if (!G || G.state !== 'play') return;
   G.state = 'pause'; clearInput();
   ov.hidden = false;
-  ov.innerHTML = `<div class="qcard"><h2>⏸ Pauza</h2><div class="row"><button class="btn green" data-r="go">▶ Graj dalej</button><button class="btn" data-r="again">Od początku</button><button class="btn" data-r="map">Menu</button></div></div>`;
+  ov.innerHTML = `<div class="qcard"><h2>⏸ Pauza</h2><div class="row"><button class="btn green" data-r="go">▶ Graj dalej</button><button class="btn" data-r="again">Od początku</button><button class="btn" data-r="map">Menu</button></div>
+    <div class="row"><button class="btn" data-r="gfx">${qLabel()}</button></div></div>`;
   ov.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.r === 'gfx') { cycleQuality(); b.textContent = qLabel(); return; }
     const i = G.i; closeOv();
     if (b.dataset.r === 'again') startLevel(i); else if (b.dataset.r === 'map') showMap();
   };
 }
+const Q_NEXT = { auto: 'high', high: 'low', low: 'auto' };
+function qLabel() { const q = save.q || 'auto'; return q === 'high' ? '✨ Grafika: piękna' : q === 'low' ? '⚡ Grafika: szybka' : `🤖 Grafika: automatyczna${save.autoLow ? ' (teraz szybka)' : ''}`; }
+function cycleQuality() { save.q = Q_NEXT[save.q || 'auto']; if (save.q !== 'auto') save.autoLow = false; put(SAVE_KEY, save); setQuality(qualityWanted()); }
 function toast(msg, ms) { toastEl.textContent = msg; toastEl.classList.remove('hide'); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.add('hide'), ms); }
 function tipShow(msg) { const t = $('#tip'); t.textContent = msg; t.classList.remove('hide'); clearTimeout(tipShow.t); tipShow.t = setTimeout(() => t.classList.add('hide'), 7000); }
 function hud() {
@@ -688,7 +831,7 @@ function camHit(ox, oy, oz, d, maxD) {
 }
 function render(dt) {
   if (!G || !renderer) return;
-  const p = G.p;
+  const p = G.p, T = performance.now() / 1000;
   // camera follows smoothly from behind/above, the player turns it
   const f = Math.min(1, dt * 10);
   cam.tx += (p.x - cam.tx) * f; cam.ty += (p.y + 1.4 - cam.ty) * Math.min(1, dt * 6); cam.tz += (p.z - cam.tz) * f;
@@ -696,38 +839,87 @@ function render(dt) {
   const dist = Math.min(cam.dist, camHit(cam.tx, cam.ty, cam.tz, dir, cam.dist));     // move in front of a block instead of looking from inside it
   camera.position.set(cam.tx + dir[0] * dist, cam.ty + dir[1] * dist, cam.tz + dir[2] * dist);
   camera.lookAt(cam.tx, cam.ty, cam.tz);
-  // player
-  avatar.position.set(p.x, p.y, p.z); avatar.rotation.y = p.face; avatar.visible = G.state !== 'dead';
-  const { legs, arms } = avatar.userData, sw = p.on ? Math.sin(p.walk) * Math.min(1, Math.hypot(p.vx, p.vz) / SPEED) * .8 : -.5;
-  legs[0].rotation.x = sw; legs[1].rotation.x = -sw; arms[0].rotation.x = p.on ? -sw : -2.6; arms[1].rotation.x = p.on ? sw : -2.6;
-  if (p.land > 0) { p.land -= dt; avatar.scale.set(1 + p.land, 1 - p.land, 1 + p.land); } else avatar.scale.set(1, 1, 1);
-  // round shadow on the block below (helps judge jumps in 3D)
+  // player animation: idle breathing, running, jumping, falling, landing squash, happy dance at the finish
+  const U = avatar.userData, speed = Math.hypot(p.vx, p.vz) / SPEED, done = G.state === 'done';
+  avatar.position.set(p.x, p.y, p.z); avatar.visible = G.state !== 'dead';
+  if (done) { p.face += dt * 3; }
+  avatar.rotation.y = p.face;
+  const sw = Math.sin(p.walk) * Math.min(1, speed);
+  let legA = 0, armA = 0, armZ = .08, bob = 0, lean = 0;
+  if (done) { const h = Math.abs(Math.sin(T * 6)); bob = h * .35; armA = -2.9; armZ = .35 + Math.sin(T * 12) * .2; legA = 0; }
+  else if (p.on) { legA = sw * .9; armA = -sw * .8; bob = Math.abs(Math.sin(p.walk)) * .07 * Math.min(1, speed) + Math.sin(T * 2.5) * .015; lean = speed * .12; }
+  else if (p.vy > 0) { legA = .7; armA = -2.7; armZ = .25; lean = .05; }
+  else { legA = -.25; armA = -1.1; armZ = .9; }
+  const k = Math.min(1, dt * 16), lerp = (o, key, v) => { o[key] += (v - o[key]) * k; };
+  lerp(U.legs[0].rotation, 'x', legA); lerp(U.legs[1].rotation, 'x', p.on || done ? -legA : -.5);
+  lerp(U.arms[0].rotation, 'x', armA); lerp(U.arms[1].rotation, 'x', p.on && !done ? -armA : armA);
+  lerp(U.arms[0].rotation, 'z', -armZ); lerp(U.arms[1].rotation, 'z', armZ);
+  lerp(U.body.position, 'y', bob); lerp(U.body.rotation, 'x', lean);
+  U.head.rotation.y = Math.sin(T * .7) * .08 * (p.on && speed < .2 ? 1 : 0);
+  U.blink -= dt; if (U.blink < 0) { U.eyes.scale.y = .1; if (U.blink < -.12) { U.eyes.scale.y = 1; U.blink = 2 + Math.random() * 3; } }
+  if (p.land > 0) { p.land -= dt; avatar.scale.set(1 + p.land, 1 - p.land * 1.4, 1 + p.land); } else avatar.scale.set(1, 1, 1);
+  // round blob shadow only in fast mode (beautiful mode has real shadows)
   let gy = -100;
-  for (const b of G.boxes) if (collides(b) && p.x > b.min.x - .1 && p.x < b.max.x + .1 && p.z > b.min.z - .1 && p.z < b.max.z + .1 && b.max.y <= p.y + .05 && b.max.y > gy) gy = b.max.y;
-  shadow.visible = gy > -100 && G.state !== 'dead';
+  if (!HQ) for (const b of G.boxes) if (collides(b) && p.x > b.min.x - .1 && p.x < b.max.x + .1 && p.z > b.min.z - .1 && p.z < b.max.z + .1 && b.max.y <= p.y + .05 && b.max.y > gy) gy = b.max.y;
+  shadow.visible = !HQ && gy > -100 && G.state !== 'dead';
   if (shadow.visible) { shadow.position.set(p.x, gy + .02, p.z); const s = clamp(1 - (p.y - gy) / 8, .4, 1); shadow.scale.set(s, s, s); }
+  // the sun and its shadow box follow the player
+  sun.position.set(p.x + 9, p.y + 18, p.z + 7); sun.target.position.set(p.x, p.y, p.z - 3);
   // trail from the wardrobe
-  const tr = avatar.userData.trail;
-  if (tr && tr !== 'none' && G.state === 'play' && Math.hypot(p.vx, p.vz) > 2) {
+  const tr = U.trail;
+  if (tr && tr !== 'none' && G.state === 'play' && speed > .3) {
     G.trailT -= dt;
-    if (G.trailT <= 0) {
-      G.trailT = .04; const t = trailPool.find(q => q.life <= 0);
-      if (t) { t.life = .6; t.m.visible = true; t.m.position.set(p.x + (Math.random() - .5) * .3, p.y + .3 + Math.random() * .8, p.z + (Math.random() - .5) * .3);
-        t.m.material.color.set(tr === 'rainbow' ? `hsl(${(G.t * 300) % 360},90%,60%)` : '#FFF59D'); }
+    if (G.trailT <= 0) { G.trailT = .035; spawnFX(p.x + (Math.random() - .5) * .3, p.y + .3 + Math.random() * .9, p.z + (Math.random() - .5) * .3, tr === 'rainbow' ? `hsl(${(T * 300) % 360},90%,60%)` : ['#FFF59D', '#FFFFFF', '#FFE082'], 1, { speed: .2, up: .3, upr: .3, g: 0, life: .7, size: .16 }); }
+  }
+  // particles
+  for (const q of FX) if (q.life > 0) {
+    q.life -= dt; if (q.life <= 0) { q.m.visible = false; continue; }
+    q.v[1] -= q.g * dt; q.m.position.x += q.v[0] * dt; q.m.position.y += q.v[1] * dt; q.m.position.z += q.v[2] * dt;
+    q.m.rotation.x += dt * 5; q.m.rotation.y += dt * 4; q.m.material.opacity = Math.min(1, q.life / q.max * 2);
+  }
+  // fireworks after the finish
+  if (done && G.fw > 0) { G.fw -= dt; if (Math.random() < dt * 5) spawnFX(p.x + (Math.random() - .5) * 10, p.y + 5 + Math.random() * 4, p.z - 2 - Math.random() * 6, [pick(['#FF5252', '#FFEB3B', '#69F0AE', '#40C4FF', '#E040FB'])], 26, { speed: 6, up: 1, upr: 3, g: 3, life: 1.1, size: .2 }); }
+  // world animation: lava, sparks, clouds, coins, diamond, gate, flags, jump pads
+  const sea = scene.userData.sea; sea.userData.tex.offset.set(T * .01, T * .006); sea.position.x = p.x; sea.position.z = p.z;
+  for (const b of G.boxes) if (b.kind === 'lava') b.mesh.material.map.offset.set(T * .08, T * .05);
+  const sv = sparks.userData.v, pos = sparks.geometry.attributes.position.array;
+  for (let i = 0; i < sv.length; i++) {
+    const s = sv[i];
+    if (s[1] > -1 || s[3] <= 0) { s[0] = p.x + (Math.random() - .5) * 60; s[1] = -9; s[2] = p.z - Math.random() * 50 + 10; s[3] = 1 + Math.random() * 3; }
+    s[1] += s[3] * dt; s[0] += Math.sin(T + i) * dt * .3;
+    pos[i * 3] = s[0]; pos[i * 3 + 1] = s[1]; pos[i * 3 + 2] = s[2];
+  }
+  sparks.geometry.attributes.position.needsUpdate = true;
+  for (const c of scene.userData.clouds) { c.position.x += c.userData.v * dt; if (c.position.x > 70) c.position.x = -70; }
+  for (const c of G.coins) if (!c.got) { c.m.rotation.z += dt * 3; c.m.position.y = c.y + Math.sin(T * 2.5 + c.z) * .08; }
+  G.gem.m.rotation.y += dt * 2; G.gem.m.position.y = G.L.gem[1] + Math.sin(T * 2) * .15;
+  if (G.gem.beam.visible) G.gem.beam.material.opacity = .12 + Math.sin(T * 2) * .05;
+  G.gate.ring.rotation.z += dt; G.gate.disc.material.opacity = .45 + Math.sin(T * 3) * .15;
+  if (Math.random() < dt * 8 && G.state === 'play') spawnFX(G.gate.x + (Math.random() - .5) * 2.4, G.gate.y + .4 + Math.random() * 2.6, G.gate.z, ['#E1BEE7', '#B388FF', '#FFFFFF'], 1, { speed: .3, up: .6, upr: .4, g: -.4, life: 1, size: .1 });
+  for (const fl of G.flags) {
+    const a = fl.cloth.geometry.attributes.position, base = fl.cloth.userData.base;
+    for (let i = 0; i < a.count; i++) { const x = base[i * 3]; a.array[i * 3 + 2] = Math.sin(T * 5 + x * 4 + fl.z) * .09 * (x + .5); }
+    a.needsUpdate = true;
+  }
+  for (const b of G.boxes) if (b.kind === 'pad') b.mesh.material.emissiveIntensity = 1 + Math.sin(T * 6) * .5;
+  if (HQ) composer.render(dt); else renderer.render(scene, camera);
+  // auto quality: measure the frame rate during the first seconds of play
+  const fp = G.fps;
+  if (!fp.done && G.state === 'play' && G.time > 1) {
+    fp.n++; fp.t += dt;
+    if (fp.t > 3) {
+      fp.done = true;
+      const fps = fp.n / fp.t;
+      if ((save.q || 'auto') === 'auto' && HQ && fps < 38) { save.autoLow = true; put(SAVE_KEY, save); setQuality(false); toast('⚡ Włączyłem szybszą grafikę, żeby gra działała płynnie', 2600); }
+      G.fpsSeen = Math.round(fps);
     }
   }
-  for (const t of trailPool) if (t.life > 0) { t.life -= dt; t.m.material.opacity = Math.max(0, t.life / .6); t.m.rotation.y += dt * 4; if (t.life <= 0) t.m.visible = false; }
-  // spinning things
-  for (const c of G.coins) if (!c.got) c.m.rotation.z += dt * 3;
-  G.gem.m.rotation.y += dt * 2; G.gem.m.position.y = G.L.gem[1] + Math.sin(G.t * 2) * .15;
-  G.gate.ring.rotation.z += dt; G.gate.disc.material.opacity = .45 + Math.sin(G.t * 3) * .15;
-  for (const fl of G.flags) fl.cloth.rotation.y = Math.sin(G.t * 3 + fl.z) * .25;
-  renderer.render(scene, camera);
 }
 function resize() {
   if (!renderer) return;
   const w = playEl.clientWidth || innerWidth, h = playEl.clientHeight || innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 75 : 62; camera.updateProjectionMatrix();
+  if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
 }
 addEventListener('resize', resize);
 let hudT = 0;
@@ -820,7 +1012,7 @@ function showMap(noGl) {
   obby = load(OBBY_KEY, { coins: 0, sound: true }); obby.avatar = Object.assign({}, AV_DEF, obby.avatar); save = load(SAVE_KEY, { stars: {}, best: {} });
   const gl = !noGl && webglOk();
   menu.innerHTML = `<div class="top"><a class="pill" href="../">◀ Klasa 2c</a><div><h1>Robo 3D</h1><div class="sub">Tor przeszkód z klocków w 3D</div></div><div class="sp"></div>
-      <span class="pill coinpill">🪙 ${obby.coins || 0}</span><button class="pill" data-a="sound">${sound() ? '🔊' : '🔇'}</button></div>
+      <span class="pill coinpill">🪙 ${obby.coins || 0}</span><button class="pill" data-a="gfx">${qLabel()}</button><button class="pill" data-a="sound">${sound() ? '🔊' : '🔇'}</button></div>
     <div class="hello"><p><b>Cześć! To Robo 3D.</b> Biegaj po klockach w trzech wymiarach, przeskakuj lawę, jeździj na ruchomych platformach i uważaj na znikające klocki.
       Na każdej 🚩 fladze odpowiedz na pytanie z lekcji – wtedy po upadku wrócisz właśnie tam.</p></div>
     <div class="planets">${LEVEL_INFO.map((l, i) => { const st = save.stars[l.id] || 0;
@@ -831,12 +1023,13 @@ function showMap(noGl) {
     <div class="how"><b>Gwiazdki:</b> ★ dojdź do bramy · ★ zbierz co najmniej 8 na 10 monet · ★ znajdź ukryty 💎 diament (rozglądaj się na boki!).<br>
       <b>Telefon:</b> lewy kciuk – chodzenie (joystick pojawia się tam, gdzie dotkniesz), prawy kciuk – przeciągaj, żeby obracać kamerę, zielony przycisk – skok.<br>
       <b>Komputer:</b> W A S D albo strzałki – chodzenie, spacja – skok, przeciągnij myszą – kamera, kółko myszy – przybliż/oddal, P – pauza.<br>
-      <b>Monety</b> są wspólne z grą <a href="../obby/">Robo Obby</a> – tam w Szafie zmienisz wygląd postaci i kupisz czapki. Postęp zapisuje się tylko w tej przeglądarce.</div>`;
+      <b>Monety</b> są wspólne z grą <a href="../obby/">Robo Obby</a> – tam w Szafie zmienisz wygląd postaci i kupisz czapki. Postęp zapisuje się tylko w tej przeglądarce.<br><b>Grafika:</b> „automatyczna” zaczyna od pięknej i sama przełącza się na szybszą, jeśli telefon nie nadąża. Przycisk na górze zmienia to ręcznie.</div>`;
 }
 menu.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   SFX.click();
   if (b.dataset.lv != null) return startLevel(+b.dataset.lv);
+  if (b.dataset.a === 'gfx') { cycleQuality(); b.textContent = qLabel(); return; }
   if (b.dataset.a === 'sound') { obby.sound = !sound(); const o = load(OBBY_KEY, {}); o.sound = obby.sound; put(OBBY_KEY, o); b.textContent = sound() ? '🔊' : '🔇'; }
 });
 showMap();
