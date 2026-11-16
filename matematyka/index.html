@@ -169,20 +169,22 @@ function genSub(i) {
   }
   return story(false);
 }
+// number one as a word, so the reader says "jedna dziesiątka" / "jedną jedność" (digits make voices guess the gender)
+const one = (n, w, txt) => n === 1 ? `${w} ${txt}` : `${n} ${txt}`;
 function genTens(i) {
   const n = between(10, 39), d = Math.floor(n / 10), j = n % 10, mode = i % 4;
   const swapped = j * 10 + d;
   if (mode === 0) return { key: 't0' + n, t: 'Jaka to liczba?', p: 'Niebieski słupek = 1 dziesiątka, żółta kostka = 1 jedność.', say: 'Jaka to liczba?',
-    prompt: blocks(n), cls: 'three', after: `${d} ${plural(d, 'dziesiątka', 'dziesiątki', 'dziesiątek')} i ${j} ${plural(j, 'jedność', 'jedności', 'jedności')} to ${n}`,
+    prompt: blocks(n), cls: 'three', after: `${one(d, 'jedna', plural(d, 'dziesiątka', 'dziesiątki', 'dziesiątek'))} i ${one(j, 'jedna', plural(j, 'jedność', 'jedności', 'jedności'))} to ${n}`,
     options: numOpts(n, 3, 10, 99, swapped !== n && j > 0 ? [swapped] : []) };
   if (mode === 1) return { key: 't1' + n, t: `Ile dziesiątek ma liczba ${n}?`, p: 'Dziesiątki to pierwsza cyfra.', say: `Ile dziesiątek ma liczba ${n}?`,
-    prompt: eq(`<span class="hl">${d}</span>${j}`), cls: 'three', after: `Liczba ${n} ma ${d} ${plural(d, 'dziesiątkę', 'dziesiątki', 'dziesiątek')}.`,
+    prompt: eq(`<span class="hl">${d}</span>${j}`), cls: 'three', after: `Liczba ${n} ma ${one(d, 'jedną', plural(d, 'dziesiątkę', 'dziesiątki', 'dziesiątek'))}.`,
     options: numOpts(d, 3, 0, 9, [j]) };
   if (mode === 2) return { key: 't2' + n, t: `Ile jedności ma liczba ${n}?`, p: 'Jedności to ostatnia cyfra.', say: `Ile jedności ma liczba ${n}?`,
-    prompt: eq(`${d}<span class="hl">${j}</span>`), cls: 'three', after: `Liczba ${n} ma ${j} ${plural(j, 'jedność', 'jedności', 'jedności')}.`,
+    prompt: eq(`${d}<span class="hl">${j}</span>`), cls: 'three', after: `Liczba ${n} ma ${one(j, 'jedną', plural(j, 'jedność', 'jedności', 'jedności'))}.`,
     options: numOpts(j, 3, 0, 9, [d]) };
-  return { key: 't3' + n, t: 'Jaka to liczba?', p: 'd – dziesiątki, j – jedności.', say: `${d} dziesiątki i ${j} jedności to jaka liczba?`,
-    prompt: eq(`${d} d  i  ${j} j`), cls: 'three', after: `${d} d i ${j} j to ${n}`,
+  return { key: 't3' + n, t: 'Jaka to liczba?', p: 'd – dziesiątki, j – jedności.', say: `${one(d, 'jedna', plural(d, 'dziesiątka', 'dziesiątki', 'dziesiątek'))} i ${one(j, 'jedna', plural(j, 'jedność', 'jedności', 'jedności'))} to jaka liczba?`,
+    prompt: eq(`${d} d  i  ${j} j`), cls: 'three', after: `${one(d, 'jedna', plural(d, 'dziesiątka', 'dziesiątki', 'dziesiątek'))} i ${one(j, 'jedna', plural(j, 'jedność', 'jedności', 'jedności'))} to ${n}`, review: `${d} d i ${j} j = ${n}`,
     options: numOpts(n, 3, 1, 99, swapped !== n && j > 0 ? [swapped, d + j] : [d + j]) };
 }
 
@@ -267,12 +269,178 @@ function genDays(i) {
     prompt: `<div class="stmt">${DAYS.indexOf(w) + 1}. dzień tygodnia</div>`, after: w };
 }
 
+/* ---------- thermometer (temperatures above and below zero) ---------- */
+const fmtT = v => `${v < 0 ? '−' : ''}${Math.abs(v)}°C`;                  // shown on screen
+const stopni = n => n === 1 ? 'jeden stopień' : `${n} ${plural(n, 'stopień', 'stopnie', 'stopni')}`;   // "1 stopień" is read as "jedno stopień"
+const tWords = v => v === 0 ? '0 stopni' : v > 0 ? `${stopni(v)} powyżej zera` : `${stopni(-v)} poniżej zera`;   // read aloud
+function thermo(t, small) {
+  const min = -10, max = 30, per = 5, top = 12, y = v => top + (max - v) * per, by = y(min) + 17;
+  let s = `<rect x="34" y="${top - 8}" width="18" height="${by - top + 8}" rx="9" fill="#fff" stroke="#546E7A" stroke-width="2"/>
+    <rect x="${small ? 17 : 54}" y="${y(0)}" width="${small ? 0 : 24}" height="${y(min) - y(0)}" fill="#E3F2FD"/>`;
+  for (let v = min; v <= max; v++) {
+    const len = v % 10 === 0 ? 14 : v % 5 === 0 ? 10 : 6;
+    s += `<line x1="52" y1="${y(v)}" x2="${52 + len}" y2="${y(v)}" stroke="${v === 0 ? '#1565C0' : '#455A64'}" stroke-width="${v % 5 ? 1 : 1.8}"/>`;
+    if (v % 5 === 0) s += `<text x="31" y="${y(v) + 4}" text-anchor="end" font-size="${v % 10 ? 9 : 11.5}" font-weight="${v % 10 ? 400 : 700}" font-family="Andika, sans-serif" fill="${v === 0 ? '#1565C0' : v < 0 ? '#1E88E5' : '#263238'}">${v < 0 ? '−' + -v : v}</text>`;
+  }
+  s += `<rect x="39" y="${y(t)}" width="8" height="${by - y(t)}" rx="3" fill="#E53935"/>
+    <circle cx="43" cy="${by}" r="13" fill="#E53935" stroke="#546E7A" stroke-width="2"/><circle cx="39" cy="${by - 4}" r="3.5" fill="#fff" opacity=".5"/>
+    <text x="70" y="${top - 1}" font-size="10" font-weight="700" font-family="Andika, sans-serif" fill="#455A64">°C</text>`;
+  return `<svg viewBox="0 0 84 ${by + 16}" style="height:${small ? 140 : 250}px;width:auto;max-width:100%" aria-label="termometr">${s}</svg>`;
+}
+const tOpts = (ans, cand) => {
+  const set = [...new Set(cand.filter(v => v !== ans && v >= -10 && v <= 30))];
+  return shuffle([ans, ...sample(set, 2)]).map(v => ({ html: fmtT(v), ok: v === ans }));
+};
+const TEMP_FACTS = [
+  ['Czym mierzymy temperaturę?', 'termometrem', ['termometrem', 'linijką', 'zegarem'], 'Temperaturę mierzymy termometrem.'],
+  ['W czym podajemy temperaturę powietrza?', 'w stopniach Celsjusza', ['w stopniach Celsjusza', 'w litrach', 'w centymetrach'], 'Temperaturę podajemy w stopniach Celsjusza.'],
+  ['W jakiej temperaturze woda zamarza i robi się lód?', '0°C', ['0°C', '10°C', '20°C'], 'Woda zamarza w temperaturze 0 stopni.'],
+  ['Temperatura spadła. Co to znaczy?', 'zrobiło się zimniej', ['zrobiło się zimniej', 'zrobiło się cieplej', 'nic się nie zmieniło'], 'Gdy temperatura spada, robi się zimniej.'],
+  ['Temperatura wzrosła. Co to znaczy?', 'zrobiło się cieplej', ['zrobiło się cieplej', 'zrobiło się zimniej', 'nic się nie zmieniło'], 'Gdy temperatura rośnie, robi się cieplej.'],
+  ['Jak nazywamy temperaturę poniżej zera?', 'mróz', ['mróz', 'upał', 'deszcz'], 'Temperatura poniżej zera to mróz.'],
+];
+function genTemp(i) {
+  const mode = i % 6;
+  if (mode === 0) {                                        // read: above zero
+    const v = between(3, 28);
+    return { key: 'T0' + v, t: 'Ile stopni pokazuje termometr?', p: 'Spójrz, gdzie kończy się czerwony słupek. Jedna kreska to 1 stopień.', say: 'Ile stopni pokazuje termometr?',
+      prompt: thermo(v), cls: 'three', after: `Termometr pokazuje ${tWords(v)}.`, review: `${fmtT(v)} – ${tWords(v)}`, options: tOpts(v, [v + 1, v - 1, v + 2, v - 2, v + 5, v - 5]) };
+  }
+  if (mode === 1) {                                        // read: below zero (or exactly zero)
+    const v = Math.random() < .15 ? 0 : -between(1, 9);
+    return { key: 'T1' + v, t: 'Ile stopni pokazuje termometr?', p: 'Uwaga: poniżej zera liczymy kreski w dół od 0.', say: 'Ile stopni pokazuje termometr? Uważaj, czy to jest powyżej, czy poniżej zera.',
+      prompt: thermo(v), cls: 'three', after: v ? `Termometr pokazuje ${tWords(v)}, czyli minus ${stopni(-v)}.` : 'Termometr pokazuje 0 stopni.',
+      review: `${fmtT(v)} – ${tWords(v)}`, options: tOpts(v, v ? [-v, v + 1, v - 1] : [1, -1, 2, -2]) };
+  }
+  if (mode === 2) {                                        // which thermometer shows …
+    const v = coin() ? between(2, 25) : -between(1, 8);
+    const opts = [...new Set([v, v < 0 ? -v : v + pick([2, 3]), v + (coin() ? 1 : -1), v - 5].filter(x => x >= -10 && x <= 30))].slice(0, 3);
+    return { key: 'T2' + v, t: `Który termometr pokazuje ${fmtT(v)}?`, p: 'Porównaj, gdzie kończy się czerwony słupek.', say: `Który termometr pokazuje ${tWords(v)}?`,
+      prompt: '', cls: 'three', after: `${tWords(v)[0].toUpperCase() + tWords(v).slice(1)}.`, review: `${fmtT(v)} – ${tWords(v)}`,
+      options: shuffle(opts).map(x => ({ html: thermo(x, true), ok: x === v })) };
+  }
+  if (mode === 3) {                                        // warmer / colder
+    const warmer = coin(), a = pick([between(1, 15), -between(1, 9)]);
+    let b; do { b = coin() ? between(-9, 20) : -a; } while (b === a || b < -10);
+    const ans = warmer ? Math.max(a, b) : Math.min(a, b);
+    const q = warmer ? 'Kiedy jest cieplej?' : 'Kiedy jest zimniej?';
+    return { key: 'T3' + a + b + warmer, t: q, p: 'Im wyżej na termometrze, tym cieplej.', say: `${q} Gdy jest ${tWords(a)}, czy gdy jest ${tWords(b)}?`,
+      prompt: `<div class="row">${thermo(a, true)}${thermo(b, true)}</div>`, cls: 'two',
+      after: `${warmer ? 'Cieplej' : 'Zimniej'} jest, gdy jest ${tWords(ans)}.`, review: `${fmtT(a)} i ${fmtT(b)}: ${warmer ? 'cieplej' : 'zimniej'} przy ${fmtT(ans)}`,
+      options: [a, b].map(v => ({ html: fmtT(v), ok: v === ans })) };
+  }
+  if (mode === 4) {                                        // temperature goes up or down (story)
+    const up = coin(), a = up ? between(2, 14) : between(9, 20), d = between(2, up ? 8 : Math.min(8, a)), r = up ? a + d : a - d;
+    const txt = up ? `Rano termometr pokazywał ${stopni(a)}. Do południa zrobiło się o ${stopni(d)} cieplej. Ile stopni było w południe?`
+                   : `W południe było ${stopni(a)}. Wieczorem temperatura spadła o ${stopni(d)}. Ile stopni było wieczorem?`;
+    return { key: 'T4' + a + d + up, t: 'Zadanie z treścią', p: up ? 'Cieplej – temperatura rośnie: dodajemy.' : 'Zimniej – temperatura spada: odejmujemy.', say: txt,
+      prompt: `<div class="stmt">${txt}</div>`, cls: 'three', after: `${a} ${up ? '+' : '−'} ${d} = ${r}. Było ${stopni(r)}.`, options: tOpts(r, [r + 1, r - 1, up ? a - d : a + d, r + 2]) };
+  }
+  if (coin()) {                                            // writing below-zero temperatures
+    const n = between(2, 9), toSign = coin();
+    if (toSign) return { key: 'T5w' + n, t: `Jak zapiszesz: ${stopni(n)} poniżej zera?`, p: 'Poniżej zera piszemy minus przed liczbą.', say: `Jak zapiszesz: ${stopni(n)} poniżej zera?`,
+      prompt: '', cls: 'three', after: `${stopni(n)[0].toUpperCase() + stopni(n).slice(1)} poniżej zera to minus ${stopni(n)}.`, options: tOpts(-n, [n, n * 10 <= 30 ? n * 10 : n + 10]) };
+    const ans = `${stopni(n)} poniżej zera`, opts = shuffle([ans, `${stopni(n)} powyżej zera`, `${n * 10} stopni`]);
+    return { key: 'T5r' + n, t: `Co oznacza zapis ${fmtT(-n)}?`, p: 'Minus przed liczbą = poniżej zera.', say: `Co oznacza zapis minus ${stopni(n)} Celsjusza?`,
+      prompt: eq(fmtT(-n)), cls: 'list', after: `Minus ${n} to ${ans}.`, options: opts.map(o => ({ html: o, ok: o === ans })) };
+  }
+  const [q, ans, opts, aft] = pick(TEMP_FACTS);
+  return { key: 'T6' + q, t: q, p: 'Termometr i pogoda.', say: q.replace('0°C', '0 stopni'), prompt: '', cls: 'list', after: aft,
+    options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
+}
+
+/* ---------- litre (capacity) ---------- */
+const litry = n => n === 1 ? 'jeden litr' : `${n} ${plural(n, 'litr', 'litry', 'litrów')}`;
+function jug(level) {                      // measuring jug with ¼, ½, ¾ and 1 litre marks; level in quarters (1–4)
+  const bottom = 150, h = 120, y = q => bottom - q / 4 * h;
+  let s = `<path d="M30 ${y(4) - 14} L36 ${bottom} Q37 ${bottom + 6} 44 ${bottom + 6} L96 ${bottom + 6} Q103 ${bottom + 6} 104 ${bottom} L110 ${y(4) - 14}" fill="#E3F2FD" stroke="#546E7A" stroke-width="3"/>
+    <path d="M110 ${y(4) - 4} C140 ${y(4)} 140 ${y(1)} 104 ${y(1) + 4}" fill="none" stroke="#546E7A" stroke-width="5"/>
+    <path d="M${33 + (4 - level) * 1.4} ${y(level)} L36.5 ${bottom} Q37 ${bottom + 5} 44 ${bottom + 5} L96 ${bottom + 5} Q103 ${bottom + 5} 103.5 ${bottom} L${107 - (4 - level) * 1.4} ${y(level)} Z" fill="#4FC3F7" opacity=".85"/>`;
+  [['¼ l', 1], ['½ l', 2], ['¾ l', 3], ['1 l', 4]].forEach(([lab, q]) => {
+    s += `<line x1="40" y1="${y(q)}" x2="58" y2="${y(q)}" stroke="#263238" stroke-width="2"/><text x="61" y="${y(q) + 5}" font-size="14" font-weight="700" font-family="Andika, sans-serif" fill="#263238">${lab}</text>`;
+  });
+  return `<svg viewBox="0 0 140 ${bottom + 12}" style="height:200px;width:auto;max-width:100%" aria-label="dzbanek z miarką">${s}</svg>`;
+}
+function tank(n) {                         // bucket-like container with a scale 0–10 litres
+  const bottom = 210, per = 19, y = v => bottom - v * per;
+  let s = `<rect x="40" y="${y(10) - 10}" width="80" height="${10 * per + 10}" rx="6" fill="#F5F5F5" stroke="#546E7A" stroke-width="3"/>
+    <rect x="42" y="${y(n)}" width="76" height="${n * per - 2}" rx="3" fill="#4FC3F7" opacity=".85"/>
+    <path d="M40 ${y(10) - 10} Q80 ${y(10) - 60} 120 ${y(10) - 10}" fill="none" stroke="#546E7A" stroke-width="4"/>`;
+  for (let v = 1; v <= 10; v++) s += `<line x1="40" y1="${y(v)}" x2="54" y2="${y(v)}" stroke="#263238" stroke-width="2"/><text x="34" y="${y(v) + 5}" text-anchor="end" font-size="13" font-weight="700" font-family="Andika, sans-serif" fill="#263238">${v}</text>`;
+  s += `<text x="80" y="${bottom - 6}" text-anchor="middle" font-size="12" font-family="Andika, sans-serif" fill="#455A64">litry</text>`;
+  return `<svg viewBox="0 0 130 ${bottom + 6}" style="height:240px;width:auto;max-width:100%" aria-label="wiadro z miarką">${s}</svg>`;
+}
+const lOpts = (ans, lo = 0, hi = 20, extra = []) => numOpts(ans, 3, lo, hi, extra).map(o => ({ html: o.html + ' l', ok: o.ok }));
+const BIG = [['🪣', 'wiadro'], ['🛁', 'wanna'], ['🏊', 'basen'], ['🍲', 'duży garnek']], SMALL = [['🥄', 'łyżeczka'], ['☕', 'kubek'], ['🥛', 'szklanka'], ['🍼', 'butelka dla niemowlaka']];
+const LITRE_EQ = [
+  ['Ile półlitrowych butelek wody to razem jeden litr?', 2, 'Pół litra i pół litra to jeden litr – 2 butelki.'],
+  ['Ile szklanek po ćwierć litra to razem jeden litr?', 4, '4 szklanki po ćwierć litra to jeden litr.'],
+  ['Ile półlitrowych kubków nalejesz z 2 litrów mleka?', 4, 'Jeden litr to 2 kubki po pół litra, więc 2 litry to 4 kubki.'],
+  ['Ile półlitrowych butelek to razem 3 litry?', 6, 'Każdy litr to 2 półlitrowe butelki: 2 + 2 + 2 = 6.'],
+  ['Ile litrów to 2 butelki po pół litra?', 1, 'Pół litra i pół litra to jeden litr.'],
+  ['Ile litrów to 4 butelki po pół litra?', 2, '4 butelki po pół litra to 2 litry.'],
+];
+const LITRE_FACTS = [
+  ['Ilość wody w butelce, czyli pojemność, mierzymy w…', 'litrach', ['litrach', 'metrach', 'stopniach'], 'Pojemność mierzymy w litrach.'],
+  ['Jakim skrótem zapisujemy litr?', 'l', ['l', 'kg', 'cm'], 'Litr zapisujemy skrótem: jedną literą el.'],
+  ['Gdzie jest więcej wody: w 2 butelkach po pół litra czy w jednej butelce litrowej?', 'tyle samo', ['tyle samo', 'w 2 półlitrowych', 'w jednej litrowej'], 'Pół litra i pół litra to jeden litr – jest tyle samo.'],
+  ['Co ma większą pojemność: wiadro czy szklanka?', 'wiadro', ['wiadro', 'szklanka', 'tyle samo'], 'Do wiadra zmieści się dużo więcej wody niż do szklanki.'],
+  ['Pół litra to…', 'połowa litra', ['połowa litra', 'dwa litry', 'dziesięć litrów'], 'Pół litra to połowa litra – dwa razy mniej.'],
+];
+const STORY_L = [
+  (a, b) => [`W akwarium było ${litry(a)} wody. Tata dolał jeszcze ${litry(b)}. Ile litrów wody jest teraz w akwarium?`, true, s => `W akwarium ${plural(s, 'jest', 'są', 'jest')} ${litry(s)} wody.`],
+  (a, b) => [`Mama kupiła ${litry(a)} soku, a babcia przyniosła jeszcze ${litry(b)}. Ile litrów soku mają razem?`, true, s => `Razem mają ${litry(s)} soku.`],
+  (a, b) => [`W wiadrze było ${litry(a)} wody. Ola podlała kwiaty i zużyła ${litry(b)}. Ile litrów wody zostało w wiadrze?`, false, r => `W wiadrze ${plural(r, 'został', 'zostały', 'zostało')} ${litry(r)} wody.`],
+  (a, b) => [`W baniaku było ${litry(a)} wody. Na wycieczce wypiliśmy ${litry(b)}. Ile litrów wody zostało?`, false, r => `${plural(r, 'Został', 'Zostały', 'Zostało')} ${litry(r)} wody.`],
+];
+function genLitre(i) {
+  const mode = i % 6;
+  if (mode === 0) {                                        // measuring jug: quarter, half, whole litre
+    const q = pick([1, 2, 2, 4, 4]), names = { 1: 'ćwierć litra', 2: 'pół litra', 4: '1 litr' }, ans = names[q];
+    return { key: 'L0' + q, t: 'Ile wody jest w dzbanku?', p: 'Spójrz na kreski z boku dzbanka.', say: 'Ile wody jest w dzbanku?',
+      prompt: jug(q), cls: 'three', after: `W dzbanku jest ${q === 4 ? 'jeden litr' : ans} wody.`, options: shuffle(Object.values(names)).map(o => ({ html: o, ok: o === ans })) };
+  }
+  if (mode === 1) {                                        // bucket with a 0–10 l scale
+    const n = between(2, 10);
+    return { key: 'L1' + n, t: 'Ile litrów wody jest w wiadrze?', p: 'Odczytaj liczbę przy kresce, do której sięga woda.', say: 'Ile litrów wody jest w wiadrze?',
+      prompt: tank(n), cls: 'three', after: `W wiadrze ${plural(n, 'jest', 'są', 'jest')} ${litry(n)} wody.`, options: lOpts(n, 1, 10) };
+  }
+  if (mode === 2) {                                        // halves and quarters of a litre
+    const [q, ans, aft] = pick(LITRE_EQ);
+    return { key: 'L2' + q, t: q, p: 'Jeden litr = pół litra + pół litra.', say: q, prompt: '', cls: 'three', after: aft, options: numOpts(ans, 3, 1, 8) };
+  }
+  if (mode === 3) {                                        // more or less than a litre
+    const more = coin(), [e, w] = pick(more ? BIG : SMALL), others = sample(more ? SMALL : BIG, 2);
+    const q = `Co zmieści ${more ? 'więcej' : 'mniej'} niż jeden litr wody?`;
+    return { key: 'L3' + w + more, t: q, p: 'Pomyśl, ile litrowych butelek wlałbyś do środka.', say: q, prompt: '', cls: 'three',
+      after: `${w[0].toUpperCase() + w.slice(1)} zmieści ${more ? 'więcej' : 'mniej'} niż litr.`,
+      options: shuffle([[e, w], ...others]).map(([ee, ww]) => ({ html: `<span style="font-size:1.6em">${ee}</span><br>${ww}`, ok: ww === w })) };
+  }
+  if (mode === 4) {                                        // story with litres
+    const f = pick(STORY_L), add = f(1, 1)[1];
+    const a = add ? between(3, 12) : between(8, 18), b = add ? between(2, Math.min(8, 20 - a)) : between(2, Math.min(8, a - 1)), r = add ? a + b : a - b;
+    const [txt, , aft] = f(a, b);
+    return { key: 'L4' + a + b + add, t: 'Zadanie z treścią', p: 'Przeczytaj i policz litry.', say: txt, prompt: `<div class="stmt">${txt}</div>`, cls: 'three',
+      after: `${a} ${add ? '+' : '−'} ${b} = ${r}. ${aft(r)}`, options: lOpts(r, 0, 20) };
+  }
+  if (coin()) {                                            // compare amounts
+    const a = between(1, 9); let b; do { b = between(1, 9); } while (b === a);
+    const q = 'Gdzie jest więcej soku?';
+    return { key: 'L5' + a + b, t: q, p: 'Porównaj liczby litrów.', say: `${q} W baniaku z ${a === 1 ? 'jednym litrem' : litry(a).replace('litry', 'litrami').replace('litrów', 'litrami')}, czy w baniaku z ${b === 1 ? 'jednym litrem' : litry(b).replace('litry', 'litrami').replace('litrów', 'litrami')}?`,
+      prompt: '', cls: 'two', after: `${Math.max(a, b)} to więcej niż ${Math.min(a, b)}.`, options: [a, b].map(v => ({ html: `🧃 ${v} l`, ok: v === Math.max(a, b) })) };
+  }
+  const [q, ans, opts, aft] = pick(LITRE_FACTS);
+  return { key: 'L6' + q, t: q, p: 'Litr i pojemność.', say: q, prompt: '', cls: 'list', after: aft, options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
+}
+
 Robo.start({
   id: 'robo-mat-2c', lang: 'pl-PL', rate: .95,
   title: 'Robo liczy', sub: 'Matematyka · klasa 2c',
-  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety i zbieraj gwiazdki ★. Na końcu zrób <b>Lot próbny</b> – to taki sprawdzian ze wszystkiego.',
+  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety i zbieraj gwiazdki ★. <b>Nowe:</b> Termometr i Litr – powtórka przed sprawdzianem. Na końcu zrób <b>Lot próbny</b> – to taki sprawdzian ze wszystkiego.',
   back: '../',
   levels: [
+    { id: 'temp', name: 'Termometr', pl: 'stopnie, powyżej i poniżej zera', col: '#E53935', ring: '#B3E5FC', gen: genTemp },
+    { id: 'litre', name: 'Litr', pl: 'pojemność, pół i ćwierć litra', col: '#29B6F6', ring: '#FFF59D', gen: genLitre },
     { id: 'add', name: 'Dodawanie', pl: 'suma, składniki, przez 10', col: '#66BB6A', ring: '#FFF59D', gen: genAdd },
     { id: 'sub', name: 'Odejmowanie', pl: 'różnica, odjemna, odjemnik', col: '#EF5350', ring: '#B3E5FC', gen: genSub },
     { id: 'tens', name: 'Dziesiątki', pl: 'dziesiątki i jedności', col: '#42A5F5', ring: '#FFCC80', gen: genTens },
