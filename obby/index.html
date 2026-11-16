@@ -189,8 +189,19 @@ function speechParts(text) {
   return parts.map(([t, e]) => [e ? strip(t).replace(/\s+/g, ' ').trim() : spokenMath(strip(t)), e]).filter(([t]) => /[\p{L}\p{N}]/u.test(t));
 }
 /* Voices skip "=" (so "4 − 1 = 3" sounded like "cztery minus jeden trzy"): say the signs as words. */
+/* Voices read the digit 2 always as "dwa". Polish needs "dwie" before feminine nouns ("dwie kury"),
+   "dwóch" before -ach ("w dwóch butelkach") and "dwoma" before -ami ("z dwoma litrami"). */
+const FEM = /^(dziesiąt|jednoś|kacz|kur[yaą]?$|kurk|nog|osob|butel|półlitrowe|krow|gwiazd|monet|godzin|minut|sekund|kred|książ|liter[yk]|sylab|głosk|samogłos|ręce|ręk|grusz|śliw|kost|piłk|lal|kart|owc|ryb|par[yaą]?$|stron|częś|połów|ćwiart|cyfr|liczb|łyż|szklan|filiżan|kropk|kres|figur|ścian|nut|zabaw|mrów|pszcz|żab|mysz|koz|kul|wież|rzecz|świeczk|świec|kanapk|bułk|marchew|cytryn|pomarańcz|truskaw|wiśni|czeresn|dyni|róż|sow|wiewiór|bied|ćwiartk|połówk|szklank|tablic|ławk|rodzin|dziewczyn|córk|siostr|babć|cioc|pani|panie)/u;
+const TWO_RE = /(?<![\d,.])(\d*)2(?=\s+([\p{L}]+))/gu;
+function polishTwo(m, head, word) {
+  if (head.endsWith('1')) return m;                                   // 12, 112: "dwanaście"
+  const w = word.toLowerCase(), tens = head ? head + '0 ' : '';
+  if (!head && /ach$/.test(w)) return 'dwóch';
+  if (!head && /ami$/.test(w)) return 'dwoma';
+  return FEM.test(w) ? tens + 'dwie' : m;
+}
 function spokenMath(t) {
-  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(/\s+/g, ' ').trim();
+  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(TWO_RE, polishTwo).replace(/\s+/g, ' ').trim();
 }
 function say(text) {
   const parts = speechParts(text);
