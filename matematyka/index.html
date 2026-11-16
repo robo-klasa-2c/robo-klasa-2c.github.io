@@ -17,7 +17,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=62d101f1"></script>
+<script src="../wspolne/robo.js?v=47eadc7b"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin, pt } = Robo;
 
@@ -434,7 +434,7 @@ function genLitre(i) {
     const a = between(1, 9); let b; do { b = between(1, 9); } while (b === a);
     const q = 'Gdzie jest więcej soku?';
     return { key: 'L5' + a + b, t: q, p: 'Porównaj liczby litrów.', en: `Where is more juice? In a container with ${lEn(a)}, or in a container with ${lEn(b)}?`, say: `${q} W baniaku z ${a === 1 ? 'jednym litrem' : litry(a).replace('litry', 'litrami').replace('litrów', 'litrami')}, czy w baniaku z ${b === 1 ? 'jednym litrem' : litry(b).replace('litry', 'litrami').replace('litrów', 'litrami')}?`,
-      prompt: '', cls: 'two', after: `${Math.max(a, b)} to więcej niż ${Math.min(a, b)}.`, options: [a, b].map(v => ({ html: `🧃 ${v} l`, ok: v === Math.max(a, b) })) };
+      prompt: '', cls: 'two', after: `${litry(Math.max(a, b))} to więcej niż ${Math.min(a, b) === 1 ? 'jeden litr' : litry(Math.min(a, b))}.`, options: [a, b].map(v => ({ html: `🧃 ${v} l`, ok: v === Math.max(a, b) })) };
   }
   const [q, ans, opts, aft, en] = pick(LITRE_FACTS);
   return { key: 'L6' + q, t: q, p: 'Litr i pojemność.', say: q, en, prompt: '', cls: 'list', after: aft, options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };

@@ -201,7 +201,7 @@ function polishTwo(m, head, word) {
   return FEM.test(w) ? tens + 'dwie' : m;
 }
 function spokenMath(t) {
-  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(TWO_RE, polishTwo).replace(/\s+/g, ' ').trim();
+  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(TWO_RE, polishTwo).replace(/(\d)\.(?=\s|$)/g, '$1,').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
 }
 function say(text) {
   const parts = speechParts(text);

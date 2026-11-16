@@ -113,7 +113,7 @@
     return FEM.test(w) ? tens + 'dwie' : m;
   }
   function spokenMath(t) {
-    return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(TWO_RE, polishTwo).replace(/\s+/g, ' ').trim();
+    return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(TWO_RE, polishTwo).replace(/(\d)\.(?=\s|$)/g, '$1,').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
   }
   const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let sayTimer = null;
