@@ -71,6 +71,9 @@ svg { display: block; }
 .speak { margin-left: auto; flex: none; width: 58px; height: 58px; border-radius: 50%; border: 0; background: #E3F2FD; display: flex;
          align-items: center; justify-content: center; }
 .speak svg { width: 32px; height: 32px; }
+.speak.en { font: 800 18px/1 Andika, sans-serif; color: #1565C0; background: #FFF8E1; }
+.speak.pl { margin-left: 8px; }
+.en-line { margin: 6px 0 0; padding: 6px 12px; border-radius: 12px; background: #FFF8E1; color: #5D4037; font-size: 17px; font-style: italic; }
 .prompt { display: flex; justify-content: center; align-items: center; min-height: 110px; margin: 14px 0; text-align: center; }
 .prompt .big { width: 170px; height: 170px; }
 .prompt .emoji { font-size: 110px; line-height: 1.1; }

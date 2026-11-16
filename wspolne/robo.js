@@ -254,7 +254,8 @@
     }
     app.innerHTML = topBar(`${state.lv.name} · ${state.lv.pl}`, true) + progressBar()
       + `<div class="card"><div class="qhead"><div><div class="t">${q.t}</div><div class="p">${q.p || ''}</div></div>
-          ${q.say ? `<button class="speak" data-act="say" title="${T.repeat}">${SPEAKER}</button>` : ''}</div>
+          ${q.en ? `<button class="speak en" data-act="sayen" title="Listen in English" lang="en">EN</button>` : ''}${q.say ? `<button class="speak${q.en ? ' pl' : ''}" data-act="say" title="${T.repeat}">${SPEAKER}</button>` : ''}</div>
+          ${q.en ? `<div class="en-line" lang="en" hidden>${q.en}</div>` : ''}
           ${body}<div style="height:70px"></div>
           <div class="bubble" id="bubble"></div><div class="robo" id="robo">${robot()}</div></div>`;
     if (q.kind === 'custom') {
@@ -388,6 +389,12 @@
       const act = b.dataset.act;
       if (act === 'home') return showHome();
       if (act === 'say' && state && state.qs) return say(state.qs[state.idx].say);
+      if (act === 'sayen' && state && state.qs) {          // optional English version of the question (shown and read by the English voice)
+        const q = state.qs[state.idx], line = app.querySelector('.en-line');
+        if (line) line.hidden = false;
+        track(`${plain(state.lv.name)} · po angielsku`);
+        return say(`<span lang="en">${q.en}</span>`);
+      }
       if (act === 'again' && state) return startLevel(state.lv);
       if (act === 'sound') {
         soundOn = !soundOn; storeSet(cfg.id + '-sound', soundOn);
