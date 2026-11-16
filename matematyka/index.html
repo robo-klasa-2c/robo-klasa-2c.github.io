@@ -205,10 +205,10 @@ const CLOCK_FACTS = [
   ['Ile minut ma godzina?', '60', ['30', '60', '100'], 'Godzina ma 60 minut.', 'How many minutes are in an hour?'],
   ['Co pokazuje krótka wskazówka?', 'godziny', ['godziny', 'minuty', 'sekundy'], 'Krótka wskazówka pokazuje godziny.', 'What does the short hand show?'],
   ['Co pokazuje długa wskazówka?', 'minuty', ['godziny', 'minuty', 'dni'], 'Długa wskazówka pokazuje minuty.', 'What does the long hand show?'],
-  ['Długa wskazówka stoi na 3. Ile minut minęło?', '15', ['3', '15', '30'], '3 razy 5 minut to 15 minut.', 'The long hand points to 3. How many minutes have passed?'],
-  ['Długa wskazówka stoi na 6. Ile minut minęło?', '30', ['6', '30', '60'], '6 razy 5 minut to 30 minut.', 'The long hand points to 6. How many minutes have passed?'],
-  ['Długa wskazówka stoi na 9. Ile minut minęło?', '45', ['9', '40', '45'], '9 razy 5 minut to 45 minut.', 'The long hand points to 9. How many minutes have passed?'],
-  ['Długa wskazówka stoi na 4. Ile minut minęło?', '20', ['4', '20', '40'], '4 razy 5 minut to 20 minut.', 'The long hand points to 4. How many minutes have passed?'],
+  ['Długa wskazówka pokazuje liczbę 3. Ile minut minęło?', '15', ['3', '15', '30'], '3 razy 5 minut to 15 minut.', 'The long hand points to 3. How many minutes have passed?'],
+  ['Długa wskazówka pokazuje liczbę 6. Ile minut minęło?', '30', ['6', '30', '60'], '6 razy 5 minut to 30 minut.', 'The long hand points to 6. How many minutes have passed?'],
+  ['Długa wskazówka pokazuje liczbę 9. Ile minut minęło?', '45', ['9', '40', '45'], '9 razy 5 minut to 45 minut.', 'The long hand points to 9. How many minutes have passed?'],
+  ['Długa wskazówka pokazuje liczbę 4. Ile minut minęło?', '20', ['4', '20', '40'], '4 razy 5 minut to 20 minut.', 'The long hand points to 4. How many minutes have passed?'],
 ];
 function genClock(i) {
   const h = between(1, 12), m = pick([0, 15, 30, 45]), mode = i % 4;
