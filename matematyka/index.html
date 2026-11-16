@@ -17,7 +17,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=47eadc7b"></script>
+<script src="../wspolne/robo.js?v=4123b6d8"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin, pt } = Robo;
 
@@ -446,14 +446,14 @@ Robo.start({
   intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety i zbieraj gwiazdki ★. <b>Nowe:</b> Termometr i Litr – powtórka przed sprawdzianem. Na końcu zrób <b>Lot próbny</b> – to taki sprawdzian ze wszystkiego.',
   back: '../',
   levels: [
-    { id: 'temp', name: 'Termometr', pl: 'stopnie, powyżej i poniżej zera', col: '#E53935', ring: '#B3E5FC', gen: genTemp },
-    { id: 'litre', name: 'Litr', pl: 'pojemność, pół i ćwierć litra', col: '#29B6F6', ring: '#FFF59D', gen: genLitre },
-    { id: 'add', name: 'Dodawanie', pl: 'suma, składniki, przez 10', col: '#66BB6A', ring: '#FFF59D', gen: genAdd },
-    { id: 'sub', name: 'Odejmowanie', pl: 'różnica, odjemna, odjemnik', col: '#EF5350', ring: '#B3E5FC', gen: genSub },
-    { id: 'tens', name: 'Dziesiątki', pl: 'dziesiątki i jedności', col: '#42A5F5', ring: '#FFCC80', gen: genTens },
-    { id: 'clock', name: 'Zegar', pl: 'kwadrans, wpół do', col: '#FFB300', ring: '#CE93D8', gen: genClock },
-    { id: 'even', name: 'Parzyste', pl: 'parzyste i nieparzyste', col: '#AB47BC', ring: '#A5D6A7', gen: genEven },
-    { id: 'days', name: 'Dni tygodnia', pl: 'po kolei i pisownia', col: '#26A69A', ring: '#F48FB1', gen: genDays },
+    { id: 'temp', icon: '🌡️', name: 'Termometr', pl: 'stopnie, powyżej i poniżej zera', col: '#E53935', ring: '#B3E5FC', gen: genTemp },
+    { id: 'litre', icon: '🥛', name: 'Litr', pl: 'pojemność, pół i ćwierć litra', col: '#29B6F6', ring: '#FFF59D', gen: genLitre },
+    { id: 'add', icon: '➕', name: 'Dodawanie', pl: 'suma, składniki, przez 10', col: '#66BB6A', ring: '#FFF59D', gen: genAdd },
+    { id: 'sub', icon: '➖', name: 'Odejmowanie', pl: 'różnica, odjemna, odjemnik', col: '#EF5350', ring: '#B3E5FC', gen: genSub },
+    { id: 'tens', icon: '🧱', name: 'Dziesiątki', pl: 'dziesiątki i jedności', col: '#42A5F5', ring: '#FFCC80', gen: genTens },
+    { id: 'clock', icon: '🕒', name: 'Zegar', pl: 'kwadrans, wpół do', col: '#FFB300', ring: '#CE93D8', gen: genClock },
+    { id: 'even', icon: '🧦', name: 'Parzyste', pl: 'parzyste i nieparzyste', col: '#AB47BC', ring: '#A5D6A7', gen: genEven },
+    { id: 'days', icon: '📅', name: 'Dni tygodnia', pl: 'po kolei i pisownia', col: '#26A69A', ring: '#F48FB1', gen: genDays },
   ],
   test: { name: 'Lot próbny', pl: 'Sprawdzian próbny: 15 pytań ze wszystkiego, bez podpowiedzi.', n: 15 },
 });

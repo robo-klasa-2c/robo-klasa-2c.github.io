@@ -17,7 +17,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=47eadc7b"></script>
+<script src="../wspolne/robo.js?v=4123b6d8"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const cap = s => s[0].toUpperCase() + s.slice(1);
@@ -252,13 +252,13 @@ Robo.start({
   intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety: teatr, pogodę, magnesy, samogłoski, zdania, dyktando i lekturę „Brzydkie kaczątko”. Zbieraj gwiazdki ★, a na końcu zrób <b>Lot próbny</b>.',
   back: '../',
   levels: [
-    { id: 'theatre', name: 'W teatrze', pl: 'słowa z teatru', col: '#EF5350', ring: '#FFF59D', gen: genTheatre },
-    { id: 'weather', name: 'Pogoda', pl: 'termometr, synoptyk…', col: '#42A5F5', ring: '#FFCC80', gen: genWeather },
-    { id: 'magnet', name: 'Magnes', pl: 'przyciąganie, bieguny', col: '#AB47BC', ring: '#90CAF9', gen: genMagnet },
-    { id: 'vowels', name: 'Samogłoski', pl: 'a, ą, e, ę, i, o, ó, u, y', col: '#66BB6A', ring: '#F48FB1', gen: genVowels },
-    { id: 'sentences', name: 'Zdania', pl: '. ? ! – rodzaje zdań', col: '#FFB300', ring: '#B39DDB', gen: genSentences },
-    { id: 'dictation', name: 'Dyktando', pl: 'pisownia trudnych słów', col: '#26A69A', ring: '#FFAB91', gen: genDictation },
-    { id: 'book-kaczatko', name: 'Lektura', pl: '„Brzydkie kaczątko”', col: '#90CAF9', ring: '#FFF59D', gen: genBook },
+    { id: 'theatre', icon: '🎭', name: 'W teatrze', pl: 'słowa z teatru', col: '#EF5350', ring: '#FFF59D', gen: genTheatre },
+    { id: 'weather', icon: '⛅', name: 'Pogoda', pl: 'termometr, synoptyk…', col: '#42A5F5', ring: '#FFCC80', gen: genWeather },
+    { id: 'magnet', icon: '🧲', name: 'Magnes', pl: 'przyciąganie, bieguny', col: '#AB47BC', ring: '#90CAF9', gen: genMagnet },
+    { id: 'vowels', icon: '🔤', name: 'Samogłoski', pl: 'a, ą, e, ę, i, o, ó, u, y', col: '#66BB6A', ring: '#F48FB1', gen: genVowels },
+    { id: 'sentences', icon: '❗', name: 'Zdania', pl: '. ? ! – rodzaje zdań', col: '#FFB300', ring: '#B39DDB', gen: genSentences },
+    { id: 'dictation', icon: '✏️', name: 'Dyktando', pl: 'pisownia trudnych słów', col: '#26A69A', ring: '#FFAB91', gen: genDictation },
+    { id: 'book-kaczatko', icon: '🦢', name: 'Lektura', pl: '„Brzydkie kaczątko”', col: '#90CAF9', ring: '#FFF59D', gen: genBook },
   ],
   test: { name: 'Lot próbny', pl: 'Sprawdzian próbny: 15 pytań ze wszystkiego, bez podpowiedzi.', n: 15 },
 });

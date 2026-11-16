@@ -25,7 +25,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=47eadc7b"></script>
+<script src="../wspolne/robo.js?v=4123b6d8"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const between = (a, b) => a + rnd(b - a + 1);
@@ -203,12 +203,12 @@ Robo.start({
   intro: '<b>Cześć! Jestem Robo – robot, który uczy się jak komputer.</b> Poprowadź mnie strzałkami, odgadnij wzory i dowiedz się, jak uczy się sztuczna inteligencja. Na końcu zrób <b>Lot próbny</b>.',
   back: '../',
   levels: [
-    { id: 'computer', name: 'Komputer', pl: 'części i klawisze', col: '#42A5F5', ring: '#FFF59D', gen: genComputer },
-    { id: 'code', name: 'Kodowanie', pl: 'strzałki na planszy', col: '#FFB300', ring: '#90CAF9', gen: genCode },
-    { id: 'pattern', name: 'Co dalej?', pl: 'wzory i reguły', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
-    { id: 'safe', name: 'Bezpieczny internet', pl: 'hasła, dane, zasady', col: '#66BB6A', ring: '#F48FB1', gen: genSafe },
-    { id: 'learn', name: 'Jak uczy się AI', pl: 'przykłady i sortowanie', col: '#EF5350', ring: '#FFCC80', gen: genLearn },
-    { id: 'ai', name: 'AI wokół nas', pl: 'gdzie jest AI, zasady', col: '#26A69A', ring: '#CE93D8', gen: genAround },
+    { id: 'computer', icon: '💻', name: 'Komputer', pl: 'części i klawisze', col: '#42A5F5', ring: '#FFF59D', gen: genComputer },
+    { id: 'code', icon: '➡️', name: 'Kodowanie', pl: 'strzałki na planszy', col: '#FFB300', ring: '#90CAF9', gen: genCode },
+    { id: 'pattern', icon: '🔁', name: 'Co dalej?', pl: 'wzory i reguły', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
+    { id: 'safe', icon: '🔒', name: 'Bezpieczny internet', pl: 'hasła, dane, zasady', col: '#66BB6A', ring: '#F48FB1', gen: genSafe },
+    { id: 'learn', icon: '🧠', name: 'Jak uczy się AI', pl: 'przykłady i sortowanie', col: '#EF5350', ring: '#FFCC80', gen: genLearn },
+    { id: 'ai', icon: '🤖', name: 'AI wokół nas', pl: 'gdzie jest AI, zasady', col: '#26A69A', ring: '#CE93D8', gen: genAround },
   ],
   test: { name: 'Lot próbny', pl: '15 pytań ze wszystkiego, bez podpowiedzi.', n: 15 },
 });

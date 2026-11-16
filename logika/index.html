@@ -99,7 +99,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=47eadc7b"></script>
+<script src="../wspolne/robo.js?v=4123b6d8"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const between = (a, b) => a + rnd(b - a + 1);
@@ -508,12 +508,12 @@ Robo.start({
   intro: '<b>Cześć! Jestem Robo i uwielbiam łamigłówki.</b> Pomyślisz o tym, czego uczysz się w klasie: liczby i zegar, dni tygodnia, teatr, pogoda, magnes, „Brzydkie kaczątko” i słówka z angielskiego. Na końcu zrób <b>Lot próbny</b>.',
   back: '../',
   levels: [
-    { id: 'odd', name: 'Co nie pasuje?', pl: 'teatr, pogoda, magnes, liczby', col: '#EF5350', ring: '#FFF59D', gen: genOdd },
-    { id: 'pattern', name: 'Wzory i pary', pl: 'liczby, zegar, dni, słówka', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
-    { id: 'riddle', name: 'Zagadki', pl: 'roboty, zabawki, kalendarz', col: '#26A69A', ring: '#FFCC80', gen: genRiddle },
-    { id: 'sudoku', name: 'Sudoku', pl: 'obrazki 4×4', col: '#42A5F5', ring: '#F48FB1', gen: genSudoku, n: 4 },
-    { id: 'maze', name: 'Tor przeszkód', pl: 'klocki i lawa: programuj strzałkami', col: '#FFB300', ring: '#90CAF9', gen: genMaze, n: 5 },
-    { id: 'memory', name: 'Pary', pl: 'gra w pamięć', col: '#66BB6A', ring: '#CE93D8', gen: genMemory, n: 3, noTest: true },
+    { id: 'odd', icon: '🔍', name: 'Co nie pasuje?', pl: 'teatr, pogoda, magnes, liczby', col: '#EF5350', ring: '#FFF59D', gen: genOdd },
+    { id: 'pattern', icon: '🧩', name: 'Wzory i pary', pl: 'liczby, zegar, dni, słówka', col: '#AB47BC', ring: '#A5D6A7', gen: genPattern },
+    { id: 'riddle', icon: '❓', name: 'Zagadki', pl: 'roboty, zabawki, kalendarz', col: '#26A69A', ring: '#FFCC80', gen: genRiddle },
+    { id: 'sudoku', icon: '🔢', name: 'Sudoku', pl: 'obrazki 4×4', col: '#42A5F5', ring: '#F48FB1', gen: genSudoku, n: 4 },
+    { id: 'maze', icon: '🌋', name: 'Tor przeszkód', pl: 'klocki i lawa: programuj strzałkami', col: '#FFB300', ring: '#90CAF9', gen: genMaze, n: 5 },
+    { id: 'memory', icon: '🃏', name: 'Pary', pl: 'gra w pamięć', col: '#66BB6A', ring: '#CE93D8', gen: genMemory, n: 3, noTest: true },
   ],
   test: { name: 'Lot próbny', pl: '12 zadań ze wszystkiego (bez gry w pary), bez podpowiedzi.', n: 12 },
 });

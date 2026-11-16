@@ -48,12 +48,12 @@
     const p = []; for (let i = 0; i < 10; i++) p.push(pt(50, 54, i % 2 ? 20 : 46, -Math.PI / 2 + i * Math.PI / 5).join(','));
     return `<svg viewBox="0 0 100 100" aria-hidden="true"><polygon points="${p.join(' ')}" fill="${on ? '#FFC107' : 'rgba(0,0,0,.08)'}" stroke="${on ? '#F57F17' : '#B0BEC5'}" stroke-width="5" stroke-linejoin="round"/></svg>`;
   }
-  function orb(col, ring, n) {
+  function orb(col, ring, n, icon) {          // icon: an emoji showing what the planet is about; the number moves to a small badge
     return `<svg viewBox="0 0 100 100" class="orb" aria-hidden="true">
       <ellipse cx="50" cy="54" rx="47" ry="12" fill="none" stroke="${ring}" stroke-width="5" transform="rotate(-18 50 54)" opacity=".9"/>
       <circle cx="50" cy="50" r="32" fill="${col}" stroke="#333" stroke-width="2.5"/>
       <circle cx="38" cy="40" r="6" fill="#fff" opacity=".35"/><circle cx="62" cy="62" r="4" fill="#000" opacity=".12"/>
-      <text x="50" y="60" text-anchor="middle" font-size="28" font-weight="700" fill="#fff" stroke="#333" stroke-width="1" font-family="Fredoka, sans-serif">${n}</text></svg>`;
+      ${icon ? `<text x="50" y="62" text-anchor="middle" font-size="34" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">${icon}</text><circle cx="80" cy="22" r="13" fill="#fff" stroke="#333" stroke-width="2"/><text x="80" y="28.5" text-anchor="middle" font-size="17" font-weight="700" fill="#333" font-family="Fredoka, sans-serif">${n}</text>` : `<text x="50" y="60" text-anchor="middle" font-size="28" font-weight="700" fill="#fff" stroke="#333" stroke-width="1" font-family="Fredoka, sans-serif">${n}</text>`}</svg>`;
   }
   const SPEAKER = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="#1E88E5"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="#1E88E5" stroke-width="2" stroke-linecap="round"/></svg>`;
   const SPEAKER_W = SPEAKER.replace(/#1E88E5/g, '#fff');
@@ -202,7 +202,7 @@
       + (allDone ? `<div class="done-banner"><b>${T.allDone}</b></div>` : '')
       + `<div class="hello">${robot()}<p>${cfg.intro}</p></div>
          <div class="planets${cfg.levels.length % 3 === 1 ? ' four' : ''}">${cfg.levels.map((l, i) => `<button class="planet" data-level="${i}">
-           ${orb(l.col, l.ring, i + 1)}<div class="nm">${l.name}</div><div class="pl">${l.pl}</div>
+           ${orb(l.col, l.ring, i + 1, l.icon)}<div class="nm">${l.name}</div><div class="pl">${l.pl}</div>
            <div class="stars3">${[1, 2, 3].map(s => star((best[l.id] || 0) >= s)).join('')}</div></button>`).join('')}</div>
          <button class="testbtn" data-level="test">${rocket()}<div><b>${cfg.test.name}</b><span>${cfg.test.pl}</span></div>
            <div class="best">${best.test != null ? `${T.record}: ${best.test}/${cfg.test.n}` : ''}</div></button>
