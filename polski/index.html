@@ -300,7 +300,15 @@ const KATAR_PROPS = ['🤧', '🧻', '🍵', '🧣', '🌡️', '🍯', '🍋', 
 const poemLoad = () => { try { return localStorage.getItem(POEM_KEY) || ''; } catch (e) { return ''; } };
 const poemSave = t => { try { localStorage.setItem(POEM_KEY, t); } catch (e) { /* private mode: text works until the page is closed */ } };
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-const poemStanzas = t => t.replace(/\r/g, '').split(/\n\s*\n/).map(s => s.split('\n').map(l => l.trim()).filter(Boolean)).filter(s => s.length);
+// text copied from a web page often comes as one long paragraph: long lines are split after , . ! ? ; : …
+const poemStanzas = t => t.replace(/\r/g, '').replace(/ /g, ' ').split(/\n\s*\n/)
+  .map(s => s.split('\n').flatMap(splitLong).map(l => l.trim()).filter(Boolean)).filter(s => s.length);
+function splitLong(l) {                    // short pieces ("apsik,") are joined with the next one so a line stays a line
+  if (l.length <= 45) return [l];
+  const out = [];
+  for (const p of l.split(/(?<=[,.!?;…])\s+/)) { if (out.length && out[out.length - 1].length < 18) out[out.length - 1] += ' ' + p; else out.push(p); }
+  return out;
+}
 const lastWord = l => (l.match(/([\p{L}-]+)[^\p{L}]*$/u) || [])[1] || '';
 let katarSkipRead = false;                 // set while restarting the level right after the text was pasted
 const KATAR_LEN = 7;                       // listening + 6 checking questions
@@ -328,7 +336,7 @@ function genKatar(i) {
       prompt: stmt(esc(x.l)), cls: 'list', after: `${x.l} ${x.next}`, review: `${x.l} / ${x.next}`,
       options: shuffle([x.next, ...others]).map(o => ({ html: esc(o), ok: o === x.next })) };
   }
-  return { kind: 'custom', key: 'katar' + i, t: 'Wierszyk „Katar”', p: 'Tekst jest za krótki na ćwiczenia – posłuchaj jeszcze raz.', say: '', after: '', mount: (el, api) => mountKatar(el, api, true) };
+  return { kind: 'custom', key: 'katar' + i, t: 'Wierszyk „Katar”', p: 'Za mało linijek, żeby zrobić pytania. Rodzic: naciśnij „Zmień tekst wierszyka” i wklej cały wierszyk.', say: 'Za mało linijek, żeby zrobić pytania. Poproś rodzica, żeby wkleił cały wierszyk.', after: '', mount: (el, api) => mountKatar(el, api, true) };
 }
 function mountKatar(el, api, hasQuiz) {
   let text = poemLoad(), run = 0, propN = 1;
