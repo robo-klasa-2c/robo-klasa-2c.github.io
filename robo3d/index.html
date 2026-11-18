@@ -177,7 +177,7 @@ const en = w => `<span lang="en">${w}</span>`;
 const strip = s => String(s || '').replace(/<[^>]+>/g, '');
 /* Voices read the digit 2 always as "dwa". Polish needs "dwie" before feminine nouns ("dwie kury"),
    "dwóch" before -ach ("w dwóch butelkach") and "dwoma" before -ami ("z dwoma litrami"). */
-const FEM = /^(dziesiąt|jednoś|kacz|kur[yaą]?$|kurk|nog|osob|butel|półlitrowe|krow|gwiazd|monet|godzin|minut|sekund|kred|książ|liter[yk]|sylab|głosk|samogłos|ręce|ręk|grusz|śliw|kost|piłk|lal|kart|owc|ryb|par[yaą]?$|stron|częś|połów|ćwiart|cyfr|liczb|łyż|szklan|filiżan|kropk|kres|figur|ścian|nut|zabaw|mrów|pszcz|żab|mysz|koz|kul|wież|rzecz|świeczk|świec|kanapk|bułk|marchew|cytryn|pomarańcz|truskaw|wiśni|czeresn|dyni|róż|sow|wiewiór|bied|ćwiartk|połówk|szklank|tablic|ławk|rodzin|dziewczyn|córk|siostr|babć|cioc|pani|panie)/u;
+const FEM = /^(dziesiąt|grup|łap|jednoś|kacz|kur[yaą]?$|kurk|nog|osob|butel|półlitrowe|krow|gwiazd|monet|godzin|minut|sekund|kred|książ|liter[yk]|sylab|głosk|samogłos|ręce|ręk|grusz|śliw|kost|piłk|lal|kart|owc|ryb|par[yaą]?$|stron|częś|połów|ćwiart|cyfr|liczb|łyż|szklan|filiżan|kropk|kres|figur|ścian|nut|zabaw|mrów|pszcz|żab|mysz|koz|kul|wież|rzecz|świeczk|świec|kanapk|bułk|marchew|cytryn|pomarańcz|truskaw|wiśni|czeresn|dyni|róż|sow|wiewiór|bied|ćwiartk|połówk|szklank|tablic|ławk|rodzin|dziewczyn|córk|siostr|babć|cioc|pani|panie)/u;
 const TWO_RE = /(?<![\d,.])(\d*)2(?=\s+([\p{L}]+))/gu;
 function polishTwo(m, head, word) {
   if (head.endsWith('1')) return m;                                   // 12, 112: "dwanaście"
@@ -187,7 +187,7 @@ function polishTwo(m, head, word) {
   return FEM.test(w) ? tens + 'dwie' : m;
 }
 function spokenMath(t) {      // voices skip "=", so "4 − 1 = 3" is read as "4 minus 1 to 3"
-  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(TWO_RE, polishTwo).replace(/(\d)\.(?=\s|$)/g, '$1,').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
+  return t.replace(/\s*=\s*/g, ' to ').replace(/(?<=\d)\s*[−-]\s*(?=\d)/g, ' minus ').replace(/(?<=\d)\s*\+\s*(?=\d)/g, ' plus ').replace(/(?<=\d)\s*[×·]\s*(?=\d)/g, ' razy ').replace(TWO_RE, polishTwo).replace(/(\d)\.(?=\s|$)/g, '$1,').replace(/,\s*$/, '').replace(/\s+/g, ' ').trim();
 }
 function speechParts(text) {
   const s = String(text || ''), parts = [], re = /<span lang="en">([\s\S]*?)<\/span>/g;

@@ -17,7 +17,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=4123b6d8"></script>
+<script src="../wspolne/robo.js?v=f5c6fa2e"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin, pt } = Robo;
 
@@ -440,12 +440,74 @@ function genLitre(i) {
   return { key: 'L6' + q, t: q, p: 'Litr i pojemność.', say: q, en, prompt: '', cls: 'list', after: aft, options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
 }
 
+/* ---------- multiplication (products up to 30) ---------- */
+const MUL_ITEMS = ['🍎', '⭐', '🌸', '🍪', '🚗', '🐞', '🍓', '🎈'];
+function groups(a, b, e) {                 // a groups of b things, each group in a dashed box
+  const box = `<span style="display:inline-flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:2px;width:${b > 4 ? 96 : b > 2 ? 72 : 48}px;min-height:48px;padding:6px;border:3px dashed #9575CD;border-radius:14px;font-size:24px;line-height:1.1">${e.repeat(b)}</span>`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:520px;margin:auto">${Array(a).fill(box).join('')}</div>`;
+}
+function mulPair() {                       // two factors, product at most 30
+  const a = between(2, 6), b = between(2, Math.min(10, Math.floor(30 / a)));
+  return coin() ? [a, b] : [b, a];
+}
+const verbMa = n => plural(n, 'ma', 'mają', 'ma');
+const STORY_MUL = [                        // [fixed factor (or 0 = random), max count, text, after, English]
+  [4, 7, (a, b, p) => [`Kot ma 4 łapy. Ile łap ${verbMa(a)} ${a} ${plural(a, 'kot', 'koty', 'kotów')}?`,
+    `${a} × 4 = ${p}. ${a} ${plural(a, 'kot', 'koty', 'kotów')} ${verbMa(a)} ${p} ${plural(p, 'łapę', 'łapy', 'łap')}.`, `A cat has 4 legs. How many legs do ${a} cats have?`]],
+  [2, 10, (a, b, p) => [`Rower ma 2 koła. Ile kół ${verbMa(a)} ${a} ${plural(a, 'rower', 'rowery', 'rowerów')}?`,
+    `${a} × 2 = ${p}. ${a} ${plural(a, 'rower', 'rowery', 'rowerów')} ${verbMa(a)} ${p} ${plural(p, 'koło', 'koła', 'kół')}.`, `A bike has 2 wheels. How many wheels do ${a} bikes have?`]],
+  [5, 6, (a, b, p) => [`Jedna ręka ma 5 palców. Ile palców ${verbMa(a)} ${a} ${plural(a, 'ręka', 'ręce', 'rąk')}?`,
+    `${a} × 5 = ${p}. ${a} ${plural(a, 'ręka', 'ręce', 'rąk')} ${verbMa(a)} ${p} ${plural(p, 'palec', 'palce', 'palców')}.`, `One hand has 5 fingers. How many fingers do ${a} hands have?`]],
+  [8, 3, (a, b, p) => [`Pająk ma 8 nóg. Ile nóg ${verbMa(a)} ${a} ${plural(a, 'pająk', 'pająki', 'pająków')}?`,
+    `${a} × 8 = ${p}. ${a} ${plural(a, 'pająk', 'pająki', 'pająków')} ${verbMa(a)} ${p} ${plural(p, 'nogę', 'nogi', 'nóg')}.`, `A spider has 8 legs. How many legs do ${a} spiders have?`]],
+  [3, 10, (a, b, p) => [`Trójkąt ma 3 boki. Ile boków ${verbMa(a)} ${a} ${plural(a, 'trójkąt', 'trójkąty', 'trójkątów')}?`,
+    `${a} × 3 = ${p}. ${a} ${plural(a, 'trójkąt', 'trójkąty', 'trójkątów')} ${verbMa(a)} ${p} ${plural(p, 'bok', 'boki', 'boków')}.`, `A triangle has 3 sides. How many sides do ${a} triangles have?`]],
+  [0, 5, (a, b, p) => [`Ania ma ${a} ${plural(a, 'pudełko', 'pudełka', 'pudełek')} kredek. W każdym pudełku ${plural(b, 'jest', 'są', 'jest')} ${b} ${plural(b, 'kredka', 'kredki', 'kredek')}. Ile kredek ma Ania?`,
+    `${a} × ${b} = ${p}. Ania ma ${p} ${plural(p, 'kredkę', 'kredki', 'kredek')}.`, `Ania has ${a} boxes of crayons. There are ${b} crayons in each box. How many crayons does Ania have?`]],
+];
+function genMul(i) {
+  const mode = i % 6;
+  if (mode === 0) {                                        // compute
+    const [a, b] = mulPair(), p = a * b;
+    return { key: 'm0' + a + 'x' + b, t: 'Ile to jest?', p: 'Mnożenie to szybkie dodawanie tych samych liczb.', say: `Ile to jest ${a} razy ${b}?`, en: `What is ${a} times ${b}?`,
+      prompt: eq(`${a} × ${b} = ${Q}`), cls: 'three', after: `${a} × ${b} = ${p}`, options: numOpts(p, 3, 0, 30, [a + b, p + a, p - b]) };
+  }
+  if (mode === 1) {                                        // picture: a groups of b
+    const a = between(2, 5), b = between(2, Math.min(6, Math.floor(30 / a))), p = a * b, e = pick(MUL_ITEMS);
+    return { key: 'm1' + a + 'x' + b, t: 'Ile jest razem?', p: 'Policz grupy i ile jest w jednej grupie.', say: 'Ile jest razem? Policz grupy i ile jest w jednej grupie.',
+      en: `How many are there altogether? There are ${a} groups of ${b}.`, prompt: groups(a, b, e), cls: 'three',
+      after: `${a} ${plural(a, 'grupa', 'grupy', 'grup')} po ${b}: ${a} × ${b} = ${p}`, options: numOpts(p, 3, 0, 30, [a + b, p + b, p - b]) };
+  }
+  if (mode === 2) {                                        // repeated addition -> multiplication
+    const a = between(2, 5), b = between(2, Math.min(9, Math.floor(30 / a))), p = a * b, adds = Array(a).fill(b).join(' + ');
+    const ans = `${a} × ${b}`, opts = [...new Set([ans, `${a} + ${b}`, b !== a ? `${b} × ${b}` : `${a + 1} × ${b}`, `${a + 1} × ${b}`])].slice(0, 3);
+    return { key: 'm2' + a + 'x' + b, t: 'Które mnożenie pasuje?', p: 'Policz, ile razy dodajemy tę samą liczbę.', say: `Które mnożenie pasuje do dodawania: ${adds}?`,
+      en: `Which multiplication matches ${Array(a).fill(b).join(' plus ')}?`, prompt: eq(`${adds}`, true), cls: 'three',
+      after: `${adds} = ${a} × ${b} = ${p}`, options: shuffle(opts).map(o => ({ html: o, ok: o === ans })) };
+  }
+  if (mode === 3) {                                        // missing factor
+    const [a, b] = mulPair(), p = a * b;
+    return { key: 'm3' + a + 'x' + b, t: 'Jakiej liczby brakuje?', p: 'Pomyśl: ile razy trzeba wziąć tę liczbę?', say: `${a} razy ile równa się ${p}?`, en: `${a} times what equals ${p}?`,
+      prompt: eq(`${a} × ${Q} = ${p}`), cls: 'three', after: `${a} × ${b} = ${p}`, options: numOpts(b, 3, 1, 10, [p - a, b + 1]) };
+  }
+  if (mode === 4) {                                        // story
+    const [fix, maxA, f] = pick(STORY_MUL), a = between(2, maxA), b = fix || between(2, Math.min(6, Math.floor(30 / a))), p = a * b, [txt, aft, en] = f(a, b, p);
+    return { key: 'm4' + txt.slice(0, 6) + a + 'x' + b, t: 'Zadanie z treścią', p: 'Przeczytaj i pomnóż.', say: txt, en, prompt: `<div class="stmt">${txt}</div>`, cls: 'three',
+      after: aft, options: numOpts(p, 3, 0, 30, [a + b, p + b, p - b]) };
+  }
+  const [a, b] = mulPair(), p = a * b;                     // swapping the factors
+  return { key: 'm5' + a + 'x' + b, t: 'Jakiej liczby brakuje?', p: 'Liczby w mnożeniu można zamienić miejscami.', say: `${a} razy ${b} to tyle samo, co ${b} razy ile?`,
+    en: `${a} times ${b} is the same as ${b} times what?`, prompt: eq(`${a} × ${b} = ${b} × ${Q}`, true), cls: 'three',
+    after: `${a} × ${b} = ${b} × ${a} = ${p}`, options: numOpts(a, 3, 1, 10, [b, p]) };
+}
+
 Robo.start({
   id: 'robo-mat-2c', lang: 'pl-PL', rate: .95,
   title: 'Robo liczy', sub: 'Matematyka · klasa 2c',
-  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety i zbieraj gwiazdki ★. <b>Nowe:</b> Termometr i Litr – powtórka przed sprawdzianem. Na końcu zrób <b>Lot próbny</b> – to taki sprawdzian ze wszystkiego.',
+  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety i zbieraj gwiazdki ★. <b>Nowe:</b> Mnożenie (na razie do 30). Na końcu zrób <b>Lot próbny</b> – to taki sprawdzian ze wszystkiego.',
   back: '../',
   levels: [
+    { id: 'mul', icon: '✖️', name: 'Mnożenie', pl: 'razy, do 30', col: '#7E57C2', ring: '#FFE082', gen: genMul },
     { id: 'temp', icon: '🌡️', name: 'Termometr', pl: 'stopnie, powyżej i poniżej zera', col: '#E53935', ring: '#B3E5FC', gen: genTemp },
     { id: 'litre', icon: '🥛', name: 'Litr', pl: 'pojemność, pół i ćwierć litra', col: '#29B6F6', ring: '#FFF59D', gen: genLitre },
     { id: 'add', icon: '➕', name: 'Dodawanie', pl: 'suma, składniki, przez 10', col: '#66BB6A', ring: '#FFF59D', gen: genAdd },
