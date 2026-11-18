@@ -261,7 +261,7 @@
     if (q.kind === 'custom') {
       const st = state, idx = st.idx, live = () => state === st && st.idx === idx && !st.lock;
       q.mount(app.querySelector('.custom'), {
-        live, hints: !isTest(), tone, say,
+        live, hints: !isTest(), tone, say, restart: () => startLevel(st.lv),
         ok: () => { if (live()) correct(q); },
         bad: () => { if (live()) wrong(); },
         miss: () => { if (live()) st.qMistakes++; },

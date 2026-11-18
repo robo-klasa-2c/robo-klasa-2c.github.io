@@ -17,7 +17,7 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<script src="../wspolne/robo.js?v=f5c6fa2e"></script>
+<script src="../wspolne/robo.js?v=9c463f64"></script>
 <script>
 const { rnd, pick, shuffle, sample, coin } = Robo;
 const cap = s => s[0].toUpperCase() + s.slice(1);
@@ -273,6 +273,8 @@ const KATAR_CSS = `<style>
   .kt-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0; }
   .kt-btns button { border: 0; border-radius: 14px; padding: 12px 16px; font: 700 17px Fredoka, sans-serif; background: #E3F2FD; color: #1565C0; cursor: pointer; }
   .kt-btns button.go { background: #43A047; color: #fff; }
+  .kt-link { border-radius: 14px; padding: 12px 16px; font: 700 17px Fredoka, sans-serif; background: #FFF3E0; color: #E65100; text-decoration: none; }
+  .kt-small { border: 0; background: none; color: #607D8B; text-decoration: underline; font-size: 14px; cursor: pointer; margin-top: 6px; }
   .kt textarea { width: 100%; max-width: 520px; min-height: 180px; font: 17px/1.4 Andika, sans-serif; border: 2px solid #90A4AE; border-radius: 12px; padding: 10px; box-sizing: border-box; background: #fff; color: #263238; }
   .kt .help { font-size: 14px; color: #607D8B; max-width: 520px; margin: 4px auto; }
   @media (prefers-reduced-motion: reduce) { .kt-nose, .kt.achoo .kt-head, .kt.achoo .kt-drop { animation: none; } }
@@ -297,12 +299,38 @@ const KATAR_SVG = `<svg viewBox="0 0 240 250" aria-label="dziewczynka z katarem"
 const KATAR_PROPS = ['🤧', '🧻', '🍵', '🧣', '🌡️', '🍯', '🍋', '🛏️', '🩺', '💊', '🧦', '😊'];
 const poemLoad = () => { try { return localStorage.getItem(POEM_KEY) || ''; } catch (e) { return ''; } };
 const poemSave = t => { try { localStorage.setItem(POEM_KEY, t); } catch (e) { /* private mode: text works until the page is closed */ } };
-function genKatar() {
-  return { kind: 'custom', key: 'katar', t: 'Wierszyk „Katar”', p: 'Posłuchaj i powtarzaj za Robo. Dotknij dziewczynki – kichnie!',
-    say: 'Posłuchaj wierszyka i powtarzaj za Robo. Dotknij dziewczynki, a kichnie!', after: 'Brawo! Teraz powiedz wierszyk sam, bez patrzenia.', review: 'wierszyk Katar',
-    mount: (el, api) => mountKatar(el, api) };
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const poemStanzas = t => t.replace(/\r/g, '').split(/\n\s*\n/).map(s => s.split('\n').map(l => l.trim()).filter(Boolean)).filter(s => s.length);
+const lastWord = l => (l.match(/([\p{L}-]+)[^\p{L}]*$/u) || [])[1] || '';
+let katarSkipRead = false;                 // set while restarting the level right after the text was pasted
+const KATAR_LEN = 7;                       // listening + 6 checking questions
+/* Question 0: listening (own drawing, sneeze, the reader). Next ones check memory using the pasted text:
+   which word ends the line (usually the rhyme) and which line comes next. */
+function genKatar(i) {
+  const text = poemLoad(), read = !text || (i === 0 && !katarSkipRead);
+  if (read) return { kind: 'custom', key: 'katar', t: 'Wierszyk „Katar”', p: 'Posłuchaj i powtarzaj za Robo. Dotknij dziewczynki – kichnie!',
+    say: 'Posłuchaj wierszyka i powtarzaj za Robo. Dotknij dziewczynki, a kichnie!', after: 'Teraz sprawdzimy, co pamiętasz.', review: 'słuchanie wierszyka',
+    mount: (el, api) => mountKatar(el, api, !!text) };
+  const st = poemStanzas(text), lines = st.flatMap((s, si) => s.map((l, k) => ({ l, si, k, next: s[k + 1] || (st[si + 1] || [])[0] || '' })));
+  const ends = [...new Set(lines.map(x => lastWord(x.l).toLowerCase()).filter(w => w.length >= 3))];
+  const canWord = ends.length >= 3, canNext = lines.filter(x => x.next).length >= 3 && lines.length >= 4;
+  if (canWord && (i % 2 || !canNext)) {
+    const x = pick(lines.filter(y => lastWord(y.l).length >= 3)), w = lastWord(x.l), cut = x.l.slice(0, x.l.lastIndexOf(w));
+    const prev = x.k ? st[x.si][x.k - 1] : '';
+    const wrong = sample(ends.filter(e => e !== w.toLowerCase()), 2);
+    return { key: 'kw' + lines.indexOf(x), t: 'Jakie słowo pasuje?', p: 'Przypomnij sobie wierszyk.', say: `${prev ? prev + ' ' : ''}${cut}… Jakie słowo pasuje?`,
+      prompt: stmt(`${prev ? `<span style="color:#90A4AE">${esc(prev)}</span><br>` : ''}${esc(cut)}<b>____</b>`), cls: 'three',
+      after: x.l, review: x.l, options: shuffle([w.toLowerCase(), ...wrong]).map(o => ({ html: esc(o), ok: o === w.toLowerCase() })) };
+  }
+  if (canNext) {
+    const x = pick(lines.filter(y => y.next)), others = sample([...new Set(lines.map(y => y.l))].filter(l => l !== x.next && l !== x.l), 2);
+    return { key: 'kn' + lines.indexOf(x), t: 'Co jest dalej?', p: 'Wybierz następną linijkę wierszyka.', say: `${x.l}… Co jest dalej?`,
+      prompt: stmt(esc(x.l)), cls: 'list', after: `${x.l} ${x.next}`, review: `${x.l} / ${x.next}`,
+      options: shuffle([x.next, ...others]).map(o => ({ html: esc(o), ok: o === x.next })) };
+  }
+  return { kind: 'custom', key: 'katar' + i, t: 'Wierszyk „Katar”', p: 'Tekst jest za krótki na ćwiczenia – posłuchaj jeszcze raz.', say: '', after: '', mount: (el, api) => mountKatar(el, api, true) };
 }
-function mountKatar(el, api) {
+function mountKatar(el, api, hasQuiz) {
   let text = poemLoad(), run = 0, propN = 1;
   const drops = ['💧', '💦', '🦠', '💧', '💦'].map((d, k) => `<span class="kt-drop" style="--dx:${[70, 95, 60, 110, 85][k]}px;--dy:${[-40, 10, 50, -10, 30][k]}px">${d}</span>`).join('');
   const scene = `<div class="kt-scene" role="button" aria-label="kichnij">${KATAR_SVG}<div class="kt-bubble">Apsik!</div>${drops}</div>`;
@@ -312,11 +340,12 @@ function mountKatar(el, api) {
     box.classList.remove('achoo'); void box.offsetWidth; box.classList.add('achoo');
     if (speak) api.say('A… a… apsik!');
   };
-  const stanzas = () => text.replace(/\r/g, '').split(/\n\s*\n/).map(s => s.split('\n').map(l => l.trim()).filter(Boolean)).filter(s => s.length);
+  const stanzas = () => poemStanzas(text);
   function showEditor() {
     run++;
     el.innerHTML = `${KATAR_CSS}<div class="kt">${scene}
-      <p class="help"><b>Dla rodzica:</b> przepisz albo wklej tekst wierszyka z zeszytu lub książki. Zwrotki oddziel pustą linią. Tekst zostaje tylko w tej przeglądarce – nie trafia na stronę.</p>
+      <p class="help"><b>Dla rodzica:</b> wklej albo przepisz tekst wierszyka (z zeszytu, książki lub strony internetowej). Zwrotki oddziel pustą linią. Tekst zostaje tylko w tej przeglądarce – nie trafia na stronę.</p>
+      <div class="kt-btns"><a class="kt-link" href="https://www.google.com/search?q=${encodeURIComponent('Jan Brzechwa Katar wiersz tekst')}" target="_blank" rel="noopener">🔎 Znajdź wierszyk w internecie</a><button data-k="paste">📋 Wklej skopiowany tekst</button></div>
       <textarea aria-label="tekst wierszyka" placeholder="Wklej tutaj tekst wierszyka…">${text.replace(/</g, '&lt;')}</textarea>
       <div class="kt-btns"><button class="go" data-k="save">💾 Zapisz i czytaj</button></div></div>`;
   }
@@ -325,8 +354,8 @@ function mountKatar(el, api) {
     const st = stanzas();
     el.innerHTML = `${KATAR_CSS}<div class="kt">${scene}<div class="kt-props">${props()}</div>
       <div class="kt-text">${st[0].map(l => `<div>${l.replace(/</g, '&lt;')}</div>`).join('')}</div>
-      <div class="kt-btns"><button class="go" data-k="all">▶ Czytaj całość</button><button data-k="stop">⏸ Stop</button><button data-k="edit">✏️ Zmień tekst</button></div>
-      <p class="help">Słuchaj i mów razem z Robo. Potem spróbuj sam – zasłoń tekst ręką!</p></div>`;
+      <div class="kt-btns"><button class="go" data-k="all">▶ Czytaj całość</button><button data-k="stop">⏸ Stop</button><button data-k="check">✅ Sprawdź, co pamiętam</button></div>
+      <p class="help">Słuchaj i mów razem z Robo. Potem spróbuj sam – zasłoń tekst ręką!<br><button class="kt-small" data-k="edit">✏️ Zmień tekst wierszyka</button></p></div>`;
   }
   const speaking = () => 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
   async function readAll() {
@@ -349,13 +378,27 @@ function mountKatar(el, api) {
       }
       await wait(500);
     }
-    if (alive()) { propN = KATAR_PROPS.length; el.querySelector('.kt-props').innerHTML = props(); sneeze(false); setTimeout(() => { if (alive()) api.ok(); }, 1200); }
+    if (alive()) {
+      propN = KATAR_PROPS.length; el.querySelector('.kt-props').innerHTML = props(); sneeze(false);
+      const chk = el.querySelector('[data-k="check"]'); if (chk) chk.classList.add('go');
+      setTimeout(() => { if (alive()) api.say('Kiedy będziesz gotowy, naciśnij: Sprawdź, co pamiętam.'); }, 1300);
+    }
   }
   el.addEventListener('click', e => {
     if (e.target.closest('.kt-scene')) return sneeze(true);
     const b = e.target.closest('[data-k]'); if (!b) return;
     const k = b.dataset.k;
     if (k === 'save') { text = el.querySelector('textarea').value.trim(); if (!text) return; poemSave(text); showReader(); readAll(); }
+    if (k === 'paste') {
+      const ta = el.querySelector('textarea');
+      const fail = () => { ta.focus(); api.say('Przytrzymaj palec w polu tekstu i wybierz: Wklej.'); };
+      if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(t => { if (t && t.trim()) ta.value = t.trim(); else fail(); }, fail); else fail();
+    }
+    if (k === 'check') {
+      run++; if ('speechSynthesis' in window) speechSynthesis.cancel();
+      if (hasQuiz) api.ok();
+      else { katarSkipRead = true; try { api.restart(); } finally { katarSkipRead = false; } }   // the level started without text: start it again with the questions
+    }
     if (k === 'all') readAll();
     if (k === 'stop') { run++; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
     if (k === 'edit') { if ('speechSynthesis' in window) speechSynthesis.cancel(); showEditor(); }
@@ -369,7 +412,7 @@ Robo.start({
   intro: '<b>Cześć! Jestem Robo.</b> <b>Nowe:</b> planeta Katar – wierszyk na pamięć. Odwiedź planety: teatr, pogodę, magnesy, samogłoski, zdania, dyktando i lekturę „Brzydkie kaczątko”. Zbieraj gwiazdki ★, a na końcu zrób <b>Lot próbny</b>.',
   back: '../',
   levels: [
-    { id: 'katar', icon: '🤧', name: 'Katar', pl: 'wierszyk na pamięć', col: '#F06292', ring: '#B2EBF2', gen: genKatar, n: 1, noTest: true },
+    { id: 'katar', icon: '🤧', name: 'Katar', pl: 'wierszyk na pamięć', col: '#F06292', ring: '#B2EBF2', gen: genKatar, get n() { return poemLoad() ? (katarSkipRead ? KATAR_LEN - 1 : KATAR_LEN) : 1; }, noTest: true },
     { id: 'theatre', icon: '🎭', name: 'W teatrze', pl: 'słowa z teatru', col: '#EF5350', ring: '#FFF59D', gen: genTheatre },
     { id: 'weather', icon: '⛅', name: 'Pogoda', pl: 'termometr, synoptyk…', col: '#42A5F5', ring: '#FFCC80', gen: genWeather },
     { id: 'magnet', icon: '🧲', name: 'Magnes', pl: 'przyciąganie, bieguny', col: '#AB47BC', ring: '#90CAF9', gen: genMagnet },
