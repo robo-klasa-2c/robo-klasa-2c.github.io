@@ -246,12 +246,130 @@ function genBook(i) {
     prompt: stmt(`<span style="color:#6b7f8c">Podpowiedź:</span> ${hint}`), after: w };
 }
 
+/* ---------- poem planet "Katar": own drawing + sneeze animation; the poem text is pasted by a parent
+   and kept only in this browser (the poem is still under copyright, so it is not published here) ---------- */
+const POEM_KEY = 'robo-wiersz-katar';
+const KATAR_CSS = `<style>
+  .kt { text-align: center; }
+  .kt-scene { position: relative; width: min(300px, 80vw); margin: 0 auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .kt-scene svg { width: 100%; height: auto; display: block; }
+  .kt-head { transform-origin: 120px 150px; transform-box: view-box; }
+  .kt-nose { transform-origin: 120px 112px; transform-box: view-box; animation: ktNose 1.6s ease-in-out infinite; }
+  @keyframes ktNose { 50% { transform: scale(1.12); } }
+  .kt.achoo .kt-head { animation: ktAchoo 1.1s ease-in-out; }
+  @keyframes ktAchoo { 0% { transform: none; } 35% { transform: rotate(-10deg) translateY(-6px); } 55% { transform: rotate(14deg) translateY(6px); } 75% { transform: rotate(-4deg); } 100% { transform: none; } }
+  .kt-bubble { position: absolute; left: 50%; top: 2%; transform: translateX(-10%) scale(0); background: #fff; border: 3px solid #E53935; border-radius: 22px;
+    padding: 6px 14px; font: 800 30px/1 Fredoka, sans-serif; color: #E53935; pointer-events: none; }
+  .kt.achoo .kt-bubble { animation: ktPop 1.3s ease-out; }
+  @keyframes ktPop { 0%, 30% { transform: translateX(-10%) scale(0); } 45% { transform: translateX(-10%) scale(1.25) rotate(-6deg); } 60%, 85% { transform: translateX(-10%) scale(1) rotate(-3deg); } 100% { transform: translateX(-10%) scale(0); } }
+  .kt-drop { position: absolute; left: 52%; top: 42%; font-size: 22px; opacity: 0; pointer-events: none; }
+  .kt.achoo .kt-drop { animation: ktFly 1.2s ease-out .45s; }
+  @keyframes ktFly { 0% { opacity: 1; transform: translate(0, 0) scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.2) rotate(200deg); } }
+  .kt-props { font-size: 34px; letter-spacing: 6px; min-height: 44px; margin: 4px 0; }
+  .kt-props span { display: inline-block; animation: ktIn .5s ease-out; }
+  @keyframes ktIn { from { transform: scale(0) rotate(-30deg); } }
+  .kt-text { background: #FFFDE7; border-radius: 16px; padding: 10px 14px; margin: 8px auto; max-width: 520px; font-size: 19px; line-height: 1.5; text-align: left; min-height: 3em; }
+  .kt-text .on { background: #FFE082; border-radius: 6px; padding: 0 4px; }
+  .kt-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0; }
+  .kt-btns button { border: 0; border-radius: 14px; padding: 12px 16px; font: 700 17px Fredoka, sans-serif; background: #E3F2FD; color: #1565C0; cursor: pointer; }
+  .kt-btns button.go { background: #43A047; color: #fff; }
+  .kt textarea { width: 100%; max-width: 520px; min-height: 180px; font: 17px/1.4 Andika, sans-serif; border: 2px solid #90A4AE; border-radius: 12px; padding: 10px; box-sizing: border-box; background: #fff; color: #263238; }
+  .kt .help { font-size: 14px; color: #607D8B; max-width: 520px; margin: 4px auto; }
+  @media (prefers-reduced-motion: reduce) { .kt-nose, .kt.achoo .kt-head, .kt.achoo .kt-drop { animation: none; } }
+</style>`;
+const KATAR_SVG = `<svg viewBox="0 0 240 250" aria-label="dziewczynka z katarem">
+  <rect x="150" y="150" width="60" height="70" rx="8" fill="#B3E5FC" stroke="#455A64" stroke-width="3"/>
+  <path d="M162 150 q8 -26 18 -4 q8 -22 18 4" fill="#fff" stroke="#90A4AE" stroke-width="2"/>
+  <path d="M70 250 q0 -70 50 -78 q50 8 50 78 z" fill="#EC407A" stroke="#333" stroke-width="3"/>
+  <path d="M84 196 q36 22 72 0" fill="none" stroke="#FFF59D" stroke-width="10" stroke-linecap="round"/>
+  <g class="kt-head">
+    <ellipse cx="120" cy="110" rx="62" ry="58" fill="#6D4C41"/>
+    <circle cx="120" cy="112" r="48" fill="#FFE0B2" stroke="#333" stroke-width="3"/>
+    <path d="M72 100 q48 -52 96 0 q-10 -40 -48 -42 q-38 2 -48 42z" fill="#6D4C41"/>
+    <circle cx="64" cy="128" r="12" fill="#6D4C41"/><circle cx="176" cy="128" r="12" fill="#6D4C41"/>
+    <path d="M96 104 q6 -5 12 0 M132 104 q6 -5 12 0" fill="none" stroke="#333" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="98" cy="124" r="7" fill="#F48FB1" opacity=".6"/><circle cx="142" cy="124" r="7" fill="#F48FB1" opacity=".6"/>
+    <circle class="kt-nose" cx="120" cy="116" r="9" fill="#E53935" stroke="#333" stroke-width="2"/>
+    <path d="M110 138 q10 6 20 0" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="rotate(-18 66 176)"><rect x="46" y="160" width="40" height="30" rx="6" fill="#fff" stroke="#90A4AE" stroke-width="2"/><path d="M50 172 h32 M50 180 h24" stroke="#64B5F6" stroke-width="2"/></g>
+</svg>`;
+const KATAR_PROPS = ['🤧', '🧻', '🍵', '🧣', '🌡️', '🍯', '🍋', '🛏️', '🩺', '💊', '🧦', '😊'];
+const poemLoad = () => { try { return localStorage.getItem(POEM_KEY) || ''; } catch (e) { return ''; } };
+const poemSave = t => { try { localStorage.setItem(POEM_KEY, t); } catch (e) { /* private mode: text works until the page is closed */ } };
+function genKatar() {
+  return { kind: 'custom', key: 'katar', t: 'Wierszyk „Katar”', p: 'Posłuchaj i powtarzaj za Robo. Dotknij dziewczynki – kichnie!',
+    say: 'Posłuchaj wierszyka i powtarzaj za Robo. Dotknij dziewczynki, a kichnie!', after: 'Brawo! Teraz powiedz wierszyk sam, bez patrzenia.', review: 'wierszyk Katar',
+    mount: (el, api) => mountKatar(el, api) };
+}
+function mountKatar(el, api) {
+  let text = poemLoad(), run = 0, propN = 1;
+  const drops = ['💧', '💦', '🦠', '💧', '💦'].map((d, k) => `<span class="kt-drop" style="--dx:${[70, 95, 60, 110, 85][k]}px;--dy:${[-40, 10, 50, -10, 30][k]}px">${d}</span>`).join('');
+  const scene = `<div class="kt-scene" role="button" aria-label="kichnij">${KATAR_SVG}<div class="kt-bubble">Apsik!</div>${drops}</div>`;
+  const props = () => KATAR_PROPS.slice(0, propN).map(p => `<span>${p}</span>`).join('');
+  const sneeze = speak => {
+    const box = el.querySelector('.kt'); if (!box) return;
+    box.classList.remove('achoo'); void box.offsetWidth; box.classList.add('achoo');
+    if (speak) api.say('A… a… apsik!');
+  };
+  const stanzas = () => text.replace(/\r/g, '').split(/\n\s*\n/).map(s => s.split('\n').map(l => l.trim()).filter(Boolean)).filter(s => s.length);
+  function showEditor() {
+    run++;
+    el.innerHTML = `${KATAR_CSS}<div class="kt">${scene}
+      <p class="help"><b>Dla rodzica:</b> przepisz albo wklej tekst wierszyka z zeszytu lub książki. Zwrotki oddziel pustą linią. Tekst zostaje tylko w tej przeglądarce – nie trafia na stronę.</p>
+      <textarea aria-label="tekst wierszyka" placeholder="Wklej tutaj tekst wierszyka…">${text.replace(/</g, '&lt;')}</textarea>
+      <div class="kt-btns"><button class="go" data-k="save">💾 Zapisz i czytaj</button></div></div>`;
+  }
+  function showReader() {
+    run++;
+    const st = stanzas();
+    el.innerHTML = `${KATAR_CSS}<div class="kt">${scene}<div class="kt-props">${props()}</div>
+      <div class="kt-text">${st[0].map(l => `<div>${l.replace(/</g, '&lt;')}</div>`).join('')}</div>
+      <div class="kt-btns"><button class="go" data-k="all">▶ Czytaj całość</button><button data-k="stop">⏸ Stop</button><button data-k="edit">✏️ Zmień tekst</button></div>
+      <p class="help">Słuchaj i mów razem z Robo. Potem spróbuj sam – zasłoń tekst ręką!</p></div>`;
+  }
+  const speaking = () => 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
+  async function readAll() {
+    const my = ++run, st = stanzas(), wait = ms => new Promise(r => setTimeout(r, ms));
+    const alive = () => my === run && el.isConnected && api.live();
+    for (let s = 0; s < st.length && alive(); s++) {
+      const box = el.querySelector('.kt-text');
+      box.innerHTML = st[s].map(l => `<div>${l.replace(/</g, '&lt;')}</div>`).join('');
+      propN = Math.min(KATAR_PROPS.length, s + 1); el.querySelector('.kt-props').innerHTML = props();
+      for (let k = 0; k < st[s].length && alive(); k++) {
+        box.querySelectorAll('div').forEach((d, j) => d.classList.toggle('on', j === k));
+        const line = st[s][k];
+        if (/aps|psik|kich/i.test(line)) sneeze(false);
+        api.say(line);
+        await wait(450);
+        const t0 = Date.now();
+        if (speaking()) { while (alive() && speaking() && Date.now() - t0 < 15000) await wait(120); }
+        else await wait(500 + line.length * 75);                 // sound off or no voice: move on by time
+        await wait(250);
+      }
+      await wait(500);
+    }
+    if (alive()) { propN = KATAR_PROPS.length; el.querySelector('.kt-props').innerHTML = props(); sneeze(false); setTimeout(() => { if (alive()) api.ok(); }, 1200); }
+  }
+  el.addEventListener('click', e => {
+    if (e.target.closest('.kt-scene')) return sneeze(true);
+    const b = e.target.closest('[data-k]'); if (!b) return;
+    const k = b.dataset.k;
+    if (k === 'save') { text = el.querySelector('textarea').value.trim(); if (!text) return; poemSave(text); showReader(); readAll(); }
+    if (k === 'all') readAll();
+    if (k === 'stop') { run++; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+    if (k === 'edit') { if ('speechSynthesis' in window) speechSynthesis.cancel(); showEditor(); }
+  });
+  if (text) showReader(); else showEditor();
+}
+
 Robo.start({
   id: 'robo-pol-2c', lang: 'pl-PL', rate: .95,
   title: 'Robo i słowa', sub: 'Polski i przyroda · klasa 2c',
-  intro: '<b>Cześć! Jestem Robo.</b> Odwiedź planety: teatr, pogodę, magnesy, samogłoski, zdania, dyktando i lekturę „Brzydkie kaczątko”. Zbieraj gwiazdki ★, a na końcu zrób <b>Lot próbny</b>.',
+  intro: '<b>Cześć! Jestem Robo.</b> <b>Nowe:</b> planeta Katar – wierszyk na pamięć. Odwiedź planety: teatr, pogodę, magnesy, samogłoski, zdania, dyktando i lekturę „Brzydkie kaczątko”. Zbieraj gwiazdki ★, a na końcu zrób <b>Lot próbny</b>.',
   back: '../',
   levels: [
+    { id: 'katar', icon: '🤧', name: 'Katar', pl: 'wierszyk na pamięć', col: '#F06292', ring: '#B2EBF2', gen: genKatar, n: 1, noTest: true },
     { id: 'theatre', icon: '🎭', name: 'W teatrze', pl: 'słowa z teatru', col: '#EF5350', ring: '#FFF59D', gen: genTheatre },
     { id: 'weather', icon: '⛅', name: 'Pogoda', pl: 'termometr, synoptyk…', col: '#42A5F5', ring: '#FFCC80', gen: genWeather },
     { id: 'magnet', icon: '🧲', name: 'Magnes', pl: 'przyciąganie, bieguny', col: '#AB47BC', ring: '#90CAF9', gen: genMagnet },
