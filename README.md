@@ -4,6 +4,7 @@ Strona: https://robo-klasa-2c.github.io/
 
 - `index.html` – strona główna (lista przedmiotów w tablicy `SUBJECTS` w skrypcie na dole pliku).
 - `angielski/unit1/` – gra „Robo Space Mission” (`index.html`) i karty do druku (`karty-unit1.pdf`).
+- `angielski/unit2/` – gra „Robo Family Mission” (Unit 2 „My family”: rodzina, drzewo rodziny `tree()`, karta Robo `robotCard()`, I've got / Have you got…?, zwierzęta); ten sam silnik co Unit 1.
 - `matematyka/` – gra „Robo liczy” (m.in. planety Mnożenie do 30 – `genMul`, `groups()` –, Termometr – `genTemp`, `thermo()` – i Litr – `genLitre`, `jug()`, `tank()`; każde pytanie ma pole `en` – przycisk „EN” czyta je angielskim głosem i pokazuje tekst); `polski/` – gra „Robo i słowa” (z lekturą „Brzydkie kaczątko”); `informatyka/` – gra „Robo koduje” (kodowanie, wzory, bezpieczny internet, AI).
 - `logika/` – gra „Robo myśli” (gry logiczne: co nie pasuje, wzory i pary, zagadki, sudoku 4×4, tor przeszkód ze strzałkami, memory – treści z bieżących tematów klasy).
 - `obby/` – gra „Robo Obby”: platformówka tor przeszkód (canvas, bez bibliotek). 5 planet budowanych w `level1()`…`level5()` (wysokość 1 = dolny rząd), pytania z lekcji na flagach etapów (`genMath`, `genEn`, `genPl`), szafa z wyglądem postaci, zapis w `localStorage`.

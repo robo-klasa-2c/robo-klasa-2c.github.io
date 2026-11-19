@@ -133,7 +133,10 @@
 document.addEventListener('click', e => { const a = e.target.closest('a.btn'); if (a && window.roboTrack) roboTrack('klik · ' + a.textContent.trim()); });
 const SUBJECTS = [
   { name: 'Angielski', en: 'English', col: '#F06292', ring: '#FFF59D', units: [
-    { title: 'Unit 1 · My favourite things', isNew: true,
+    { title: 'Unit 2 · My family', isNew: true,
+      topics: ['rodzina: mum, dad, sister, brother, grandma, granddad', 'aunt, uncle, cousin', 'This is my…', "I've got / I haven't got", "Have you got…? Yes, I have / No, I haven't", 'zwierzęta: dog, cat, horse'],
+      links: [{ kind: 'game', label: 'Zagraj: Robo Family Mission', href: 'angielski/unit2/' }] },
+    { title: 'Unit 1 · My favourite things',
       topics: ['kolory', 'liczby 1–15', 'zabawki', "It's / It isn't", 'Is it…? Yes, it is / No, it isn\'t', 'My favourite thing is…'],
       links: [
         { kind: 'game', label: 'Zagraj: Robo Space Mission', href: 'angielski/unit1/' },
